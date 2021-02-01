@@ -1,0 +1,361 @@
+################################
+#.libPaths("/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+library(ncdf, lib="/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+library(colorRamps, lib="/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+library(maps)#, lib="/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+library(ncdf4)#, lib="/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+library(fields)#, lib="/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+library(akima)#, lib="/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+#library(LSD)#, lib="/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+library(RColorBrewer, lib.loc="/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+
+### We are only going to take 2 simulations: 2005soc and 2005soc_2005CO2
+## That way we will compare with and without CO2 (for fixed 2005soc).
+## To study the effect of land-use change, we'll have to look at 2005soc vs rcp60 for a subset of models...
+## That gives us four models: ORCHIDEE, CARAIB, LPJ-GUESS, VISIT
+## For HIST we take simulation with full HIST scenario for society and CO2. Same 4 models...
+
+################################################################
+#### SOILMOIST from lpj_guess:
+forcing <- c("gfdl-esm2m", "ipsl-cm5a-lr", "hadgem2-es", "miroc5")
+forcing2 <- c("gfdl_esm2m", "ipsl_cm5a_lr", "hadgem2_es", "miroc5")
+########### LPJ_GUESS
+###  HIST
+for (m in 1:4){ print(forcing[m])
+data <- nc_open(paste("/n/holystore01/LABS/mccoll_lab/Lab/aberg/DATA/ISIMIP/HIST/lpj-guess_",
+forcing[m],"_ewembi_historical_histsoc_co2_soilmoist_global_yearly_1861_2005.nc", sep=""))
+soilmoist_lpj_guess_historical_histsoc_co2 <- ncvar_get(data, "soilmoist")[,360:1,1,]
+nc_close(data)
+assign(paste("soilmoist_",forcing2[m],"_lpj_guess_historical_histsoc_co2_year",sep=""), soilmoist_lpj_guess_historical_histsoc_co2)
+rm(soilmoist_lpj_guess_historical_histsoc_co2) }
+### RCP60, C02=2005
+for (m in 1:4){ print(forcing[m])
+data <- nc_open(paste("/n/holystore01/LABS/mccoll_lab/Lab/aberg/DATA/ISIMIP/RCP60/lpj-guess_",
+forcing[m],"_ewembi_rcp60_2005soc_2005co2_soilmoist_global_yearly_2006_2099.nc", sep=""))
+soilmoist_lpj_guess_rcp60_2005soc_2005co2 <- ncvar_get(data, "soilmoist")[,360:1,1,]
+nc_close(data); 
+assign(paste("soilmoist_",forcing2[m],"_lpj_guess_rcp60_2005soc_2005co2_year",sep=""), soilmoist_lpj_guess_rcp60_2005soc_2005co2)
+rm(soilmoist_lpj_guess_rcp60_2005soc_2005co2 )}
+### RCP60, CO2=RCP60
+for (m in 1:4){ print(forcing[m])
+data <- nc_open(paste("/n/holystore01/LABS/mccoll_lab/Lab/aberg/DATA/ISIMIP/RCP60/lpj-guess_",
+forcing[m],"_ewembi_rcp60_2005soc_co2_soilmoist_global_yearly_2006_2099.nc", sep=""))
+soilmoist_lpj_guess_rcp60_2005soc_co2 <- ncvar_get(data, "soilmoist")[,360:1,1,]
+nc_close(data)
+assign(paste("soilmoist_",forcing2[m],"_lpj_guess_rcp60_2005soc_co2_year",sep=""), soilmoist_lpj_guess_rcp60_2005soc_co2)
+rm(soilmoist_lpj_guess_rcp60_2005soc_co2 ) }
+
+########### ORCHIDEE
+###  HIST
+for (m in 1:4){ print(forcing[m])
+data <- nc_open(paste("/n/holystore01/LABS/mccoll_lab/Lab/aberg/DATA/ISIMIP/HIST/orchidee_",
+forcing[m],"_ewembi_historical_histsoc_co2_soilmoist_global_yearly_1861_2005.nc", sep=""))
+soilmoist_orchidee_historical_histsoc_co2 <- apply(ncvar_get(data, "soilmoist")[,360:1,1:9,], c(1,2,4), sum,na.rm=T)
+nc_close(data)
+assign(paste("soilmoist_",forcing2[m],"_orchidee_historical_histsoc_co2_year",sep=""), soilmoist_orchidee_historical_histsoc_co2)
+rm(soilmoist_orchidee_historical_histsoc_co2) }
+### RCP60, C02=2005
+for (m in 1:4){ print(forcing[m])
+data <- nc_open(paste("/n/holystore01/LABS/mccoll_lab/Lab/aberg/DATA/ISIMIP/RCP60/orchidee_",
+forcing[m],"_ewembi_rcp60_2005soc_2005co2_soilmoist_global_yearly_2006_2099.nc", sep=""))
+soilmoist_orchidee_rcp60_2005soc_2005co2 <- apply(ncvar_get(data, "soilmoist")[,360:1,1:9,], c(1,2,4), sum,na.rm=T)
+nc_close(data);
+assign(paste("soilmoist_",forcing2[m],"_orchidee_rcp60_2005soc_2005co2_year",sep=""), soilmoist_orchidee_rcp60_2005soc_2005co2)
+rm(soilmoist_orchidee_rcp60_2005soc_2005co2 )}
+### RCP60, CO2=RCP60
+for (m in 1:4){ print(forcing[m])
+data <- nc_open(paste("/n/holystore01/LABS/mccoll_lab/Lab/aberg/DATA/ISIMIP/RCP60/orchidee_",
+forcing[m],"_ewembi_rcp60_2005soc_co2_soilmoist_global_yearly_2006_2099.nc", sep=""))
+soilmoist_orchidee_rcp60_2005soc_co2 <- apply(ncvar_get(data, "soilmoist")[,360:1,1:9,], c(1,2,4), sum,na.rm=T)
+nc_close(data)
+assign(paste("soilmoist_",forcing2[m],"_orchidee_rcp60_2005soc_co2_year",sep=""), soilmoist_orchidee_rcp60_2005soc_co2)
+rm(soilmoist_orchidee_rcp60_2005soc_co2 ) }
+
+########### CARAIB
+###  HIST
+for (m in 1:4){ print(forcing[m])
+data <- nc_open(paste("/n/holystore01/LABS/mccoll_lab/Lab/aberg/DATA/ISIMIP/HIST/caraib_",
+forcing[m],"_ewembi_historical_histsoc_co2_soilmoist_global_yearly_1861_2005.nc", sep=""))
+soilmoist_caraib_historical_histsoc_co2 <- ncvar_get(data, "soilmoist")[,360:1,]
+nc_close(data)
+assign(paste("soilmoist_",forcing2[m],"_caraib_historical_histsoc_co2_year",sep=""), soilmoist_caraib_historical_histsoc_co2)
+rm(soilmoist_caraib_historical_histsoc_co2) }
+### RCP60, C02=2005
+for (m in 1:4){ print(forcing[m])
+data <- nc_open(paste("/n/holystore01/LABS/mccoll_lab/Lab/aberg/DATA/ISIMIP/RCP60/caraib_",
+forcing[m],"_ewembi_rcp60_2005soc_2005co2_soilmoist_global_yearly_2006_2099.nc", sep=""))
+soilmoist_caraib_rcp60_2005soc_2005co2 <- ncvar_get(data, "soilmoist")[,360:1,]
+nc_close(data);
+assign(paste("soilmoist_",forcing2[m],"_caraib_rcp60_2005soc_2005co2_year",sep=""), soilmoist_caraib_rcp60_2005soc_2005co2)
+rm(soilmoist_caraib_rcp60_2005soc_2005co2 )}
+### RCP60, CO2=RCP60
+for (m in 1:4){ print(forcing[m])
+data <- nc_open(paste("/n/holystore01/LABS/mccoll_lab/Lab/aberg/DATA/ISIMIP/RCP60/caraib_",
+forcing[m],"_ewembi_rcp60_2005soc_co2_soilmoist_global_yearly_2006_2099.nc", sep=""))
+soilmoist_caraib_rcp60_2005soc_co2 <- ncvar_get(data, "soilmoist")[,360:1,]
+nc_close(data)
+assign(paste("soilmoist_",forcing2[m],"_caraib_rcp60_2005soc_co2_year",sep=""), soilmoist_caraib_rcp60_2005soc_co2)
+rm(soilmoist_caraib_rcp60_2005soc_co2 ) }
+
+
+
+#######################################################################
+#######################################################################
+#######################################################################
+#######################################################################
+#######################################################################
+#######################################################################
+#######################################################################
+#######################################################################
+#######################################################################
+########################
+### Multi model means (forcings...)
+#forcing <- c("gfdl-esm2m", "ipsl-cm5a-lr", "hadgem2-es", "miroc5")
+### just edit the lines below with the four different veg. models:
+## LPJ_GUESS
+soilmoist_MMM_lpj_guess_historical_histsoc_co2_year <- array(NA, dim=dim(soilmoist_miroc5_lpj_guess_historical_histsoc_co2_year))
+for (i in 1:length(lon_lpj_guess)) {print(i)
+for (j in 1:length(lat_lpj_guess)) {
+bob <- rbind(soilmoist_gfdl_esm2m_lpj_guess_historical_histsoc_co2_year[i,j,],soilmoist_ipsl_cm5a_lr_lpj_guess_historical_histsoc_co2_year[i,j,],
+soilmoist_hadgem2_es_lpj_guess_historical_histsoc_co2_year[i,j,],soilmoist_miroc5_lpj_guess_historical_histsoc_co2_year[i,j,])
+soilmoist_MMM_lpj_guess_historical_histsoc_co2_year[i,j,] <- colMeans(bob, na.rm=T) ; rm(bob) }}
+
+soilmoist_MMM_lpj_guess_rcp60_2005soc_co2_year <- array(NA, dim=dim(soilmoist_miroc5_lpj_guess_rcp60_2005soc_co2_year))
+for (i in 1:length(lon_lpj_guess)) {print(i)
+for (j in 1:length(lat_lpj_guess)) {
+bob <- rbind(soilmoist_gfdl_esm2m_lpj_guess_rcp60_2005soc_co2_year[i,j,],soilmoist_ipsl_cm5a_lr_lpj_guess_rcp60_2005soc_co2_year[i,j,],
+soilmoist_hadgem2_es_lpj_guess_rcp60_2005soc_co2_year[i,j,],soilmoist_miroc5_lpj_guess_rcp60_2005soc_co2_year[i,j,])
+soilmoist_MMM_lpj_guess_rcp60_2005soc_co2_year[i,j,] <- colMeans(bob, na.rm=T)  ; rm(bob)}}
+
+soilmoist_MMM_lpj_guess_rcp60_2005soc_2005co2_year <- array(NA, dim=dim(soilmoist_miroc5_lpj_guess_rcp60_2005soc_2005co2_year))
+for (i in 1:length(lon_lpj_guess)) {print(i)
+for (j in 1:length(lat_lpj_guess)) {
+bob <- rbind(soilmoist_gfdl_esm2m_lpj_guess_rcp60_2005soc_2005co2_year[i,j,],soilmoist_ipsl_cm5a_lr_lpj_guess_rcp60_2005soc_2005co2_year[i,j,],
+soilmoist_hadgem2_es_lpj_guess_rcp60_2005soc_2005co2_year[i,j,],soilmoist_miroc5_lpj_guess_rcp60_2005soc_2005co2_year[i,j,])
+soilmoist_MMM_lpj_guess_rcp60_2005soc_2005co2_year[i,j,] <- colMeans(bob, na.rm=T) ; rm(bob) }}
+
+## ORCHIDEE
+soilmoist_MMM_orchidee_historical_histsoc_co2_year <- array(NA, dim=dim(soilmoist_miroc5_orchidee_historical_histsoc_co2_year))
+for (i in 1:length(lon_orchidee)) {print(i)
+for (j in 1:length(lat_orchidee)) {
+bob <- rbind(soilmoist_gfdl_esm2m_orchidee_historical_histsoc_co2_year[i,j,],soilmoist_ipsl_cm5a_lr_orchidee_historical_histsoc_co2_year[i,j,],
+soilmoist_hadgem2_es_orchidee_historical_histsoc_co2_year[i,j,],soilmoist_miroc5_orchidee_historical_histsoc_co2_year[i,j,])
+soilmoist_MMM_orchidee_historical_histsoc_co2_year[i,j,] <- colMeans(bob, na.rm=T) ; rm(bob) }}
+
+soilmoist_MMM_orchidee_rcp60_2005soc_co2_year <- array(NA, dim=dim(soilmoist_miroc5_orchidee_rcp60_2005soc_co2_year))
+for (i in 1:length(lon_orchidee)) {print(i)
+for (j in 1:length(lat_orchidee)) {
+bob <- rbind(soilmoist_gfdl_esm2m_orchidee_rcp60_2005soc_co2_year[i,j,],soilmoist_ipsl_cm5a_lr_orchidee_rcp60_2005soc_co2_year[i,j,],
+soilmoist_hadgem2_es_orchidee_rcp60_2005soc_co2_year[i,j,],soilmoist_miroc5_orchidee_rcp60_2005soc_co2_year[i,j,])
+soilmoist_MMM_orchidee_rcp60_2005soc_co2_year[i,j,] <- colMeans(bob, na.rm=T)  ; rm(bob)}}
+
+soilmoist_MMM_orchidee_rcp60_2005soc_2005co2_year <- array(NA, dim=dim(soilmoist_miroc5_orchidee_rcp60_2005soc_2005co2_year))
+for (i in 1:length(lon_orchidee)) {print(i)
+for (j in 1:length(lat_orchidee)) {
+bob <- rbind(soilmoist_gfdl_esm2m_orchidee_rcp60_2005soc_2005co2_year[i,j,],soilmoist_ipsl_cm5a_lr_orchidee_rcp60_2005soc_2005co2_year[i,j,],
+soilmoist_hadgem2_es_orchidee_rcp60_2005soc_2005co2_year[i,j,],soilmoist_miroc5_orchidee_rcp60_2005soc_2005co2_year[i,j,])
+soilmoist_MMM_orchidee_rcp60_2005soc_2005co2_year[i,j,] <- colMeans(bob, na.rm=T) ; rm(bob) }}
+
+## CARAIB
+soilmoist_MMM_caraib_historical_histsoc_co2_year <- array(NA, dim=dim(soilmoist_miroc5_caraib_historical_histsoc_co2_year))
+for (i in 1:length(lon_caraib)) {print(i)
+for (j in 1:length(lat_caraib)) {
+bob <- rbind(soilmoist_gfdl_esm2m_caraib_historical_histsoc_co2_year[i,j,],soilmoist_ipsl_cm5a_lr_caraib_historical_histsoc_co2_year[i,j,],
+soilmoist_hadgem2_es_caraib_historical_histsoc_co2_year[i,j,],soilmoist_miroc5_caraib_historical_histsoc_co2_year[i,j,])
+soilmoist_MMM_caraib_historical_histsoc_co2_year[i,j,] <- colMeans(bob, na.rm=T) ; rm(bob) }}
+  
+soilmoist_MMM_caraib_rcp60_2005soc_co2_year <- array(NA, dim=dim(soilmoist_miroc5_caraib_rcp60_2005soc_co2_year))
+for (i in 1:length(lon_caraib)) {print(i)
+for (j in 1:length(lat_caraib)) {
+bob <- rbind(soilmoist_gfdl_esm2m_caraib_rcp60_2005soc_co2_year[i,j,],soilmoist_ipsl_cm5a_lr_caraib_rcp60_2005soc_co2_year[i,j,],
+soilmoist_hadgem2_es_caraib_rcp60_2005soc_co2_year[i,j,],soilmoist_miroc5_caraib_rcp60_2005soc_co2_year[i,j,])
+soilmoist_MMM_caraib_rcp60_2005soc_co2_year[i,j,] <- colMeans(bob, na.rm=T)  ; rm(bob)}}
+
+soilmoist_MMM_caraib_rcp60_2005soc_2005co2_year <- array(NA, dim=dim(soilmoist_miroc5_caraib_rcp60_2005soc_2005co2_year))
+for (i in 1:length(lon_caraib)) {print(i)
+for (j in 1:length(lat_caraib)) {
+bob <- rbind(soilmoist_gfdl_esm2m_caraib_rcp60_2005soc_2005co2_year[i,j,],soilmoist_ipsl_cm5a_lr_caraib_rcp60_2005soc_2005co2_year[i,j,],
+soilmoist_hadgem2_es_caraib_rcp60_2005soc_2005co2_year[i,j,],soilmoist_miroc5_caraib_rcp60_2005soc_2005co2_year[i,j,])
+soilmoist_MMM_caraib_rcp60_2005soc_2005co2_year[i,j,] <- colMeans(bob, na.rm=T) ; rm(bob) }}
+
+
+
+####################################################################
+list_models <- c("caraib", "lpj_guess", "orchidee", "visit")
+png("SOILMOIST_rcp60_allmodels_averageofforcings_withCO2.png", width=1300, height=1200)
+layout(matrix(1:12,4,3, byrow=T))
+for (m in 1:3){ if (m %in% c(1,3)){
+lon <- get(paste("lon_",list_models[m], sep=""));lat <- get(paste("lat_",list_models[m], sep=""))
+lowlat <- min(which(lat > -60)); highlat <- min(which(lat > 80))
+soilmoist_fut_co2 <- apply(get(paste("soilmoist_MMM_", list_models[m], "_rcp60_2005soc_co2_year",sep=""))[,,65:94], c(1,2), mean, na.rm=T)
+soilmoist_pres<- apply(get(paste("soilmoist_MMM_", list_models[m],"_historical_histsoc_co2_year",sep=""))[,,111:140], c(1,2), mean, na.rm=T)
+if (m==3){soilmoist_fut_co2[soilmoist_fut_co2==0] <- NA; soilmoist_pres[soilmoist_pres==0]<- NA }
+image.plot(lon, lat[lowlat:highlat], soilmoist_pres[,lowlat:highlat], zlim=c(0,700), col=col_custom(20), breaks=seq(0,700, by=35),
+main=paste(list_models[m],", HIST, 1971-2000, MMM",sep=""), cex.main=1.5); map(add=T, interior=F)
+image.plot(lon, lat[lowlat:highlat], soilmoist_fut_co2[,lowlat:highlat], zlim= c(0,700), col=col_custom(20),breaks=seq(0,700, by=35),
+main=paste(list_models[m], ", RCP60, 2070-2099 (CO2=RCP60), MMM", sep=""), cex.main=1.5); map(add=T, interior=F)
+diff  <- soilmoist_fut_co2 - soilmoist_pres; diff[which(diff >100)] <- 100; diff[which(diff < -100)] <- -100;  
+image.plot(lon, lat[lowlat:highlat], diff[,lowlat:highlat], breaks=seq(-100, 100, by=5), 
+col=col_custom(40)[40:1], main=paste(list_models[m],", 2070-2099 minus 1971-2000, CO2=RCP60", sep=""), cex.main=1.5);  map(add=T, interior=F) }
+################################
+if (m==2){
+lon <- get(paste("lon_",list_models[m], sep=""));lat <- get(paste("lat_",list_models[m], sep=""))
+lowlat <- min(which(lat > -60)); highlat <- min(which(lat > 80))
+soilmoist_fut_co2 <- apply(get(paste("soilmoist_MMM_", list_models[m], "_rcp60_2005soc_co2_year",sep=""))[,,65:94], c(1,2), mean, na.rm=T)
+soilmoist_pres<- apply(get(paste("soilmoist_MMM_", list_models[m],"_historical_histsoc_co2_year",sep=""))[,,111:140], c(1,2), mean, na.rm=T)
+image.plot(lon, lat[lowlat:highlat], soilmoist_pres[,lowlat:highlat],zlim=c(0,100), col=col_custom(20), breaks=seq(0,100, by=5),
+main=paste(list_models[m],", HIST, 1971-2000, MMM",sep=""), cex.main=1.5); map(add=T, interior=F)
+image.plot(lon, lat[lowlat:highlat], soilmoist_fut_co2[,lowlat:highlat],zlim= c(0,100), col=col_custom(20),breaks=seq(0,100,by=5),
+main=paste(list_models[m], ", RCP60, 2070-2099 (CO2=RCP60), MMM", sep=""), cex.main=1.5); map(add=T, interior=F)
+diff  <- soilmoist_fut_co2 - soilmoist_pres; diff[which(diff >10)] <- 10; diff[which(diff < -10)] <- -10;
+image.plot(lon, lat[lowlat:highlat], diff[,lowlat:highlat], breaks=seq(-10, 10, by=0.5),
+col=col_custom(40)[40:1], main=paste(list_models[m],", 2070-2099 minus 1971-2000, CO2=RCP60", sep=""), cex.main=1.5);  map(add=T, interior=F) } }
+dev.off()
+
+
+##############################################
+### Save data:
+save(soilmoist_gfdl_esm2m_lpj_guess_rcp60_2005soc_2005co2_year, file="save_RData/soilmoist_gfdl_esm2m_lpj_guess_rcp60_2005soc_2005co2_year.RData")
+save(soilmoist_ipsl_cm5a_lr_lpj_guess_rcp60_2005soc_2005co2_year, file="save_RData/soilmoist_ipsl_cm5a_lr_lpj_guess_rcp60_2005soc_2005co2_year.RData")
+save(soilmoist_hadgem2_es_lpj_guess_rcp60_2005soc_2005co2_year, file="save_RData/soilmoist_hadgem2_es_lpj_guess_rcp60_2005soc_2005co2_year.RData")
+save(soilmoist_miroc5_lpj_guess_rcp60_2005soc_2005co2_year, file="save_RData/soilmoist_miroc5_lpj_guess_rcp60_2005soc_2005co2_year.RData")
+
+save(soilmoist_gfdl_esm2m_orchidee_rcp60_2005soc_2005co2_year, file="save_RData/soilmoist_gfdl_esm2m_orchidee_rcp60_2005soc_2005co2_year.RData")
+save(soilmoist_ipsl_cm5a_lr_orchidee_rcp60_2005soc_2005co2_year, file="save_RData/soilmoist_ipsl_cm5a_lr_orchidee_rcp60_2005soc_2005co2_year.RData")
+save(soilmoist_hadgem2_es_orchidee_rcp60_2005soc_2005co2_year, file="save_RData/soilmoist_hadgem2_es_orchidee_rcp60_2005soc_2005co2_year.RData")
+save(soilmoist_miroc5_orchidee_rcp60_2005soc_2005co2_year, file="save_RData/soilmoist_miroc5_orchidee_rcp60_2005soc_2005co2_year.RData")
+
+save(soilmoist_gfdl_esm2m_caraib_rcp60_2005soc_2005co2_year, file="save_RData/soilmoist_gfdl_esm2m_caraib_rcp60_2005soc_2005co2_year.RData")
+save(soilmoist_ipsl_cm5a_lr_caraib_rcp60_2005soc_2005co2_year, file="save_RData/soilmoist_ipsl_cm5a_lr_caraib_rcp60_2005soc_2005co2_year.RData")
+save(soilmoist_hadgem2_es_caraib_rcp60_2005soc_2005co2_year, file="save_RData/soilmoist_hadgem2_es_caraib_rcp60_2005soc_2005co2_year.RData")
+save(soilmoist_miroc5_caraib_rcp60_2005soc_2005co2_year, file="save_RData/soilmoist_miroc5_caraib_rcp60_2005soc_2005co2_year.RData")
+
+#save(soilmoist_gfdl_esm2m_visit_rcp60_2005soc_2005co2_year, file="save_RData/soilmoist_gfdl_esm2m_visit_rcp60_2005soc_2005co2_year.RData")
+#save(soilmoist_ipsl_cm5a_lr_visit_rcp60_2005soc_2005co2_year, file="save_RData/soilmoist_ipsl_cm5a_lr_visit_rcp60_2005soc_2005co2_year.RData")
+#save(soilmoist_hadgem2_es_visit_rcp60_2005soc_2005co2_year, file="save_RData/soilmoist_hadgem2_es_visit_rcp60_2005soc_2005co2_year.RData")
+#save(soilmoist_miroc5_visit_rcp60_2005soc_2005co2_year, file="save_RData/soilmoist_miroc5_visit_rcp60_2005soc_2005co2_year.RData")
+
+
+
+save(soilmoist_gfdl_esm2m_lpj_guess_rcp60_2005soc_co2_year, file="save_RData/soilmoist_gfdl_esm2m_lpj_guess_rcp60_2005soc_co2_year.RData")
+save(soilmoist_ipsl_cm5a_lr_lpj_guess_rcp60_2005soc_co2_year, file="save_RData/soilmoist_ipsl_cm5a_lr_lpj_guess_rcp60_2005soc_co2_year.RData")
+save(soilmoist_hadgem2_es_lpj_guess_rcp60_2005soc_co2_year, file="save_RData/soilmoist_hadgem2_es_lpj_guess_rcp60_2005soc_co2_year.RData")
+save(soilmoist_miroc5_lpj_guess_rcp60_2005soc_co2_year, file="save_RData/soilmoist_miroc5_lpj_guess_rcp60_2005soc_co2_year.RData")
+
+save(soilmoist_gfdl_esm2m_orchidee_rcp60_2005soc_co2_year, file="save_RData/soilmoist_gfdl_esm2m_orchidee_rcp60_2005soc_co2_year.RData")
+save(soilmoist_ipsl_cm5a_lr_orchidee_rcp60_2005soc_co2_year, file="save_RData/soilmoist_ipsl_cm5a_lr_orchidee_rcp60_2005soc_co2_year.RData")
+save(soilmoist_hadgem2_es_orchidee_rcp60_2005soc_co2_year, file="save_RData/soilmoist_hadgem2_es_orchidee_rcp60_2005soc_co2_year.RData")
+save(soilmoist_miroc5_orchidee_rcp60_2005soc_co2_year, file="save_RData/soilmoist_miroc5_orchidee_rcp60_2005soc_co2_year.RData")
+
+save(soilmoist_gfdl_esm2m_caraib_rcp60_2005soc_co2_year, file="save_RData/soilmoist_gfdl_esm2m_caraib_rcp60_2005soc_co2_year.RData")
+save(soilmoist_ipsl_cm5a_lr_caraib_rcp60_2005soc_co2_year, file="save_RData/soilmoist_ipsl_cm5a_lr_caraib_rcp60_2005soc_co2_year.RData")
+save(soilmoist_hadgem2_es_caraib_rcp60_2005soc_co2_year, file="save_RData/soilmoist_hadgem2_es_caraib_rcp60_2005soc_co2_year.RData")
+save(soilmoist_miroc5_caraib_rcp60_2005soc_co2_year, file="save_RData/soilmoist_miroc5_caraib_rcp60_2005soc_co2_year.RData")
+
+#save(soilmoist_gfdl_esm2m_visit_rcp60_2005soc_co2_year, file="save_RData/soilmoist_gfdl_esm2m_visit_rcp60_2005soc_co2_year.RData")
+#save(soilmoist_ipsl_cm5a_lr_visit_rcp60_2005soc_co2_year, file="save_RData/soilmoist_ipsl_cm5a_lr_visit_rcp60_2005soc_co2_year.RData")
+#save(soilmoist_hadgem2_es_visit_rcp60_2005soc_co2_year, file="save_RData/soilmoist_hadgem2_es_visit_rcp60_2005soc_co2_year.RData")
+#save(soilmoist_miroc5_visit_rcp60_2005soc_co2_year, file="save_RData/soilmoist_miroc5_visit_rcp60_2005soc_co2_year.RData")
+
+
+save(soilmoist_gfdl_esm2m_lpj_guess_historical_histsoc_co2_year, file="save_RData/soilmoist_gfdl_esm2m_lpj_guess_historical_histsoc_co2_year.RData")
+save(soilmoist_ipsl_cm5a_lr_lpj_guess_historical_histsoc_co2_year, file="save_RData/soilmoist_ipsl_cm5a_lr_lpj_guess_historical_histsoc_co2_year.RData")
+save(soilmoist_hadgem2_es_lpj_guess_historical_histsoc_co2_year, file="save_RData/soilmoist_hadgem2_es_lpj_guess_historical_histsoc_co2_year.RData")
+save(soilmoist_miroc5_lpj_guess_historical_histsoc_co2_year, file="save_RData/soilmoist_miroc5_lpj_guess_historical_histsoc_co2_year.RData")
+
+save(soilmoist_gfdl_esm2m_orchidee_historical_histsoc_co2_year, file="save_RData/soilmoist_gfdl_esm2m_orchidee_historical_histsoc_co2_year.RData")
+save(soilmoist_ipsl_cm5a_lr_orchidee_historical_histsoc_co2_year, file="save_RData/soilmoist_ipsl_cm5a_lr_orchidee_historical_histsoc_co2_year.RData")
+save(soilmoist_hadgem2_es_orchidee_historical_histsoc_co2_year, file="save_RData/soilmoist_hadgem2_es_orchidee_historical_histsoc_co2_year.RData")
+save(soilmoist_miroc5_orchidee_historical_histsoc_co2_year, file="save_RData/soilmoist_miroc5_orchidee_historical_histsoc_co2_year.RData")
+
+save(soilmoist_gfdl_esm2m_caraib_historical_histsoc_co2_year, file="save_RData/soilmoist_gfdl_esm2m_caraib_historical_histsoc_co2_year.RData")
+save(soilmoist_ipsl_cm5a_lr_caraib_historical_histsoc_co2_year, file="save_RData/soilmoist_ipsl_cm5a_lr_caraib_historical_histsoc_co2_year.RData")
+save(soilmoist_hadgem2_es_caraib_historical_histsoc_co2_year, file="save_RData/soilmoist_hadgem2_es_caraib_historical_histsoc_co2_year.RData")
+save(soilmoist_miroc5_caraib_historical_histsoc_co2_year, file="save_RData/soilmoist_miroc5_caraib_historical_histsoc_co2_year.RData")
+
+#save(soilmoist_gfdl_esm2m_visit_historical_histsoc_co2_year, file="save_RData/soilmoist_gfdl_esm2m_visit_historical_histsoc_co2_year.RData")
+#save(soilmoist_ipsl_cm5a_lr_visit_historical_histsoc_co2_year, file="save_RData/soilmoist_ipsl_cm5a_lr_visit_historical_histsoc_co2_year.RData")
+#save(soilmoist_hadgem2_es_visit_historical_histsoc_co2_year, file="save_RData/soilmoist_hadgem2_es_visit_historical_histsoc_co2_year.RData")
+#save(soilmoist_miroc5_visit_historical_histsoc_co2_year, file="save_RData/soilmoist_miroc5_visit_historical_histsoc_co2_year.RData")
+
+
+
+############################################
+#### Just mean SOILMOIST (we have to weigh it, though...)
+
+global_soilmoist_MMM_lpj_guess_hist<- NULL
+global_soilmoist_MMM_lpj_guess_rcp60_co2 <- NULL
+global_soilmoist_MMM_lpj_guess_rcp60_2005co2 <- NULL
+for (t in 1:145) {
+global_soilmoist_MMM_lpj_guess_hist[t] <- weighted.mean(soilmoist_MMM_lpj_guess_historical_histsoc_co2_year[,,t], cell_area, na.rm=T)  }
+for (t in 1:94) {
+global_soilmoist_MMM_lpj_guess_rcp60_co2[t] <- weighted.mean(soilmoist_MMM_lpj_guess_rcp60_2005soc_co2_year[,,t], cell_area, na.rm=T) 
+global_soilmoist_MMM_lpj_guess_rcp60_2005co2[t] <- weighted.mean(soilmoist_MMM_lpj_guess_rcp60_2005soc_2005co2_year[,,t], cell_area, na.rm=T) }
+
+global_soilmoist_MMM_orchidee_hist<- NULL
+global_soilmoist_MMM_orchidee_rcp60_co2 <- NULL
+global_soilmoist_MMM_orchidee_rcp60_2005co2 <- NULL
+for (t in 1:145) {
+global_soilmoist_MMM_orchidee_hist[t] <- sum(soilmoist_MMM_orchidee_historical_histsoc_co2_year[,,t]*cell_area, na.rm=T)/sum(cell_area, na.rm=T)  }
+for (t in 1:94) {
+global_soilmoist_MMM_orchidee_rcp60_co2[t] <- sum(soilmoist_MMM_orchidee_rcp60_2005soc_co2_year[,,t]*cell_area, na.rm=T)/sum(cell_area, na.rm=T) 
+global_soilmoist_MMM_orchidee_rcp60_2005co2[t] <- sum(soilmoist_MMM_orchidee_rcp60_2005soc_2005co2_year[,,t]*cell_area, na.rm=T)/sum(cell_area, na.rm=T) }
+global_soilmoist_MMM_visit_hist<- NULL
+global_soilmoist_MMM_visit_rcp60_co2 <- NULL
+global_soilmoist_MMM_visit_rcp60_2005co2 <- NULL
+for (t in 1:145) {
+global_soilmoist_MMM_visit_hist[t] <- sum(soilmoist_MMM_visit_historical_histsoc_co2_year[,,t]*cell_area, na.rm=T)/sum(cell_area, na.rm=T)  }
+for (t in 1:94) {
+global_soilmoist_MMM_visit_rcp60_co2[t] <- sum(soilmoist_MMM_visit_rcp60_2005soc_co2_year[,,t]*cell_area, na.rm=T)/sum(cell_area, na.rm=T) 
+global_soilmoist_MMM_visit_rcp60_2005co2[t] <- sum(soilmoist_MMM_visit_rcp60_2005soc_2005co2_year[,,t]*cell_area, na.rm=T)/sum(cell_area, na.rm=T) }
+global_soilmoist_MMM_caraib_hist<- NULL
+global_soilmoist_MMM_caraib_rcp60_co2 <- NULL
+global_soilmoist_MMM_caraib_rcp60_2005co2 <- NULL
+for (t in 1:145) {
+global_soilmoist_MMM_caraib_hist[t] <- sum(soilmoist_MMM_caraib_historical_histsoc_co2_year[,,t]*cell_area, na.rm=T)/sum(cell_area, na.rm=T)  }
+for (t in 1:94) {
+global_soilmoist_MMM_caraib_rcp60_co2[t] <- sum(soilmoist_MMM_caraib_rcp60_2005soc_co2_year[,,t]*cell_area, na.rm=T)/sum(cell_area, na.rm=T) 
+global_soilmoist_MMM_caraib_rcp60_2005co2[t] <- sum(soilmoist_MMM_caraib_rcp60_2005soc_2005co2_year[,,t]*cell_area, na.rm=T)/sum(cell_area, na.rm=T) }
+
+
+
+png("global_SOILMOIST_timeseries.png", width=1200, height=800); layout(matrix(1:4, 2,2))
+plot(1861:2005, global_soilmoist_MMM_lpj_guess_hist, xlim=c(1861,2099), ylim=c(1, 3), type="l", xlab="1861-2099",
+main="LPJ_GUESS")
+lines(2006:2099, global_soilmoist_MMM_lpj_guess_rcp60_co2)
+lines(2006:2099, global_soilmoist_MMM_lpj_guess_rcp60_2005co2, col="red")
+#legend("topright", bty="n", col=c("black", "red"), c("HIST soc/CO2, then 2005 soc./ RCP60 CO2", "HIST soc/CO2, then 2005 soc and CO2"), lwd=2)
+abline(v=2005, col="gray")
+text(1950, 0.25, "HIST soc/CO2")
+text(2050, 0.25, "RCP60, soc.=2005 and CO2=2005", col="red")
+text(2050, 0.24, "RCP60, soc.=2005 and CO2=RCP60")
+plot(1861:2005, global_soilmoist_MMM_orchidee_hist, xlim=c(1861,2099), ylim=c(1, 3), type="l", xlab="1861-2099",
+main="ORCHIDEE")
+lines(2006:2099, global_soilmoist_MMM_orchidee_rcp60_co2)
+lines(2006:2099, global_soilmoist_MMM_orchidee_rcp60_2005co2, col="red")
+abline(v=2005, col="gray")
+text(1950, 0.25, "HIST soc/CO2")
+text(2050, 0.25, "RCP60, soc.=2005 and CO2=2005", col="red")
+text(2050, 0.24, "RCP60, soc.=2005 and CO2=RCP60")
+plot(1861:2005, global_soilmoist_MMM_visit_hist, xlim=c(1861,2099), ylim=c(3,6), type="l", xlab="1861-2099",
+main="VISIT")
+lines(2006:2099, global_soilmoist_MMM_visit_rcp60_co2)
+lines(2006:2099, global_soilmoist_MMM_visit_rcp60_2005co2, col="red")
+abline(v=2005, col="gray")
+text(1950, 0.25, "HIST soc/CO2")
+text(2050, 0.25, "RCP60, soc.=2005 and CO2=2005", col="red")
+text(2050, 0.24, "RCP60, soc.=2005 and CO2=RCP60")
+plot(1861:2005, global_soilmoist_MMM_caraib_hist, xlim=c(1861,2099), ylim=c(1, 3), type="l", xlab="1861-2099",
+main="CARAIB")
+lines(2006:2099, global_soilmoist_MMM_caraib_rcp60_co2)
+lines(2006:2099, global_soilmoist_MMM_caraib_rcp60_2005co2, col="red")
+abline(v=2005, col="gray")
+text(1950, 0.25, "HIST soc/CO2")
+text(2050, 0.25, "RCP60, soc.=2005 and CO2=2005", col="red")
+text(2050, 0.24, "RCP60, soc.=2005 and CO2=RCP60")
+dev.off()
+
+
+
+
+

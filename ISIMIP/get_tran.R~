@@ -1,0 +1,460 @@
+################################
+#.libPaths("/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+library(ncdf, lib="/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+library(colorRamps, lib="/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+library(maps)#, lib="/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+library(ncdf4)#, lib="/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+library(fields)#, lib="/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+library(akima)#, lib="/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+#library(LSD)#, lib="/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+library(RColorBrewer, lib.loc="/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+
+### We are only going to take 2 simulations: 2005soc and 2005soc_2005CO2
+## That way we will compare with and without CO2 (for fixed 2005soc).
+## To study the effect of land-use change, we'll have to look at 2005soc vs rcp60 for a subset of models...
+## That gives us four models: ORCHIDEE, CARAIB, LPJ-GUESS, VISIT
+## For HIST we take simulation with full HIST scenario for society and CO2. Same 4 models...
+
+################################################################
+#### TRANS from lpj_guess:
+forcing <- c("gfdl-esm2m", "ipsl-cm5a-lr", "hadgem2-es", "miroc5")
+forcing2 <- c("gfdl_esm2m", "ipsl_cm5a_lr", "hadgem2_es", "miroc5")
+########### LPJ_GUESS
+###  HIST
+for (m in 1:4){ print(forcing[m])
+data <- nc_open(paste("/n/holystore01/LABS/mccoll_lab/Lab/aberg/DATA/ISIMIP/HIST/lpj-guess_",
+forcing[m],"_ewembi_historical_histsoc_co2_trans_global_monthly_1861_2005.nc", sep=""))
+lat_lpj_guess <- ncvar_get(data, "lat")[360:1]
+lon_lpj_guess <- ncvar_get(data, "lon")
+trans_lpj_guess_historical_histsoc_co2 <- ncvar_get(data, "trans")[,360:1,]
+nc_close(data)
+number_years <- dim(trans_lpj_guess_historical_histsoc_co2)[3]/12
+bob <- array(NA, dim=c(dim(trans_lpj_guess_historical_histsoc_co2)[1:2], number_years))
+for (a in 1:number_years){print(a)
+bob[,,a] <- apply(trans_lpj_guess_historical_histsoc_co2[,,(12*(a-1)+1):(12*a)], c(1,2), mean)}
+assign(paste("trans_",forcing2[m],"_lpj_guess_historical_histsoc_co2_year",sep=""),bob)
+rm(bob); rm(trans_lpj_guess_historical_histsoc_co2) }
+### RCP60, C02=2005
+for (m in 1:4){ print(forcing[m])
+data <- nc_open(paste("/n/holystore01/LABS/mccoll_lab/Lab/aberg/DATA/ISIMIP/RCP60/lpj-guess_",
+forcing[m],"_ewembi_rcp60_2005soc_2005co2_trans_global_monthly_2006_2099.nc", sep=""))
+trans_lpj_guess_rcp60_2005soc_2005co2 <- ncvar_get(data, "trans")[,360:1,]
+nc_close(data); 
+number_years <- dim(trans_lpj_guess_rcp60_2005soc_2005co2 )[3]/12
+bob <- array(NA, dim=c(dim(trans_lpj_guess_rcp60_2005soc_2005co2 )[1:2], number_years))
+for (a in 1:number_years){print(a)
+bob[,,a] <- apply(trans_lpj_guess_rcp60_2005soc_2005co2 [,,(12*(a-1)+1):(12*a)], c(1,2), mean)}
+assign(paste("trans_",forcing2[m],"_lpj_guess_rcp60_2005soc_2005co2_year",sep=""),bob)
+rm(bob); rm(trans_lpj_guess_rcp60_2005soc_2005co2 )}
+### RCP60, CO2=RCP60
+for (m in 1:4){ print(forcing[m])
+data <- nc_open(paste("/n/holystore01/LABS/mccoll_lab/Lab/aberg/DATA/ISIMIP/RCP60/lpj-guess_",
+forcing[m],"_ewembi_rcp60_2005soc_co2_trans_global_monthly_2006_2099.nc", sep=""))
+trans_lpj_guess_rcp60_2005soc_co2 <- ncvar_get(data, "trans")[,360:1,]
+nc_close(data)
+number_years <- dim(trans_lpj_guess_rcp60_2005soc_co2 )[3]/12
+bob <- array(NA, dim=c(dim(trans_lpj_guess_rcp60_2005soc_co2 )[1:2], number_years))
+for (a in 1:number_years){print(a)
+bob[,,a] <- apply(trans_lpj_guess_rcp60_2005soc_co2 [,,(12*(a-1)+1):(12*a)], c(1,2), mean)}
+assign(paste("trans_",forcing2[m],"_lpj_guess_rcp60_2005soc_co2_year",sep=""),bob)
+rm(bob); rm(trans_lpj_guess_rcp60_2005soc_co2 ) }
+
+########### ORCHIDEE
+###  HIST
+for (m in 1:4){ print(forcing[m])
+data <- nc_open(paste("/n/holystore01/LABS/mccoll_lab/Lab/aberg/DATA/ISIMIP/HIST/orchidee_",
+forcing[m],"_ewembi_historical_histsoc_co2_trans_global_monthly_1861_2005.nc", 
+sep=""))
+lat_orchidee <- ncvar_get(data, "lat")[360:1]
+lon_orchidee <- ncvar_get(data, "lon")
+trans_orchidee_historical_histsoc_co2 <- ncvar_get(data, "trans")[,360:1,]
+nc_close(data)
+number_years <- dim(trans_orchidee_historical_histsoc_co2)[3]/12
+bob <- array(NA, dim=c(dim(trans_orchidee_historical_histsoc_co2)[1:2], number_years))
+for (a in 1:number_years){print(a)
+bob[,,a] <- apply(trans_orchidee_historical_histsoc_co2[,,(12*(a-1)+1):(12*a)], c(1,2), mean)}
+assign(paste("trans_",forcing2[m],"_orchidee_historical_histsoc_co2_year",sep=""),bob)
+rm(bob); rm(trans_orchidee_historical_histsoc_co2) }
+### RCP60, C02=2005
+for (m in 1:4){ print(forcing[m])
+data <- nc_open(paste("/n/holystore01/LABS/mccoll_lab/Lab/aberg/DATA/ISIMIP/RCP60/orchidee_",
+forcing[m],"_ewembi_rcp60_2005soc_2005co2_trans_global_monthly_2006_2099.nc", 
+sep=""))
+trans_orchidee_rcp60_2005soc_2005co2 <- ncvar_get(data, "trans")[,360:1,]
+nc_close(data);
+number_years <- dim(trans_orchidee_rcp60_2005soc_2005co2 )[3]/12
+bob <- array(NA, dim=c(dim(trans_orchidee_rcp60_2005soc_2005co2 )[1:2], number_years))
+for (a in 1:number_years){print(a)
+bob[,,a] <- apply(trans_orchidee_rcp60_2005soc_2005co2 [,,(12*(a-1)+1):(12*a)], c(1,2), mean)}
+assign(paste("trans_",forcing2[m],"_orchidee_rcp60_2005soc_2005co2_year",sep=""),bob)
+rm(bob); rm(trans_orchidee_rcp60_2005soc_2005co2 )}
+### RCP60, CO2=RCP60
+for (m in 1:4){ print(forcing[m])
+data <- nc_open(paste("/n/holystore01/LABS/mccoll_lab/Lab/aberg/DATA/ISIMIP/RCP60/orchidee_",
+forcing[m],"_ewembi_rcp60_2005soc_co2_trans_global_monthly_2006_2099.nc", sep=""))
+trans_orchidee_rcp60_2005soc_co2 <- ncvar_get(data, "trans")[,360:1,]
+nc_close(data)
+number_years <- dim(trans_orchidee_rcp60_2005soc_co2 )[3]/12
+bob <- array(NA, dim=c(dim(trans_orchidee_rcp60_2005soc_co2 )[1:2], number_years))
+for (a in 1:number_years){print(a)
+bob[,,a] <- apply(trans_orchidee_rcp60_2005soc_co2 [,,(12*(a-1)+1):(12*a)], c(1,2), mean)}
+assign(paste("trans_",forcing2[m],"_orchidee_rcp60_2005soc_co2_year",sep=""),bob)
+rm(bob); rm(trans_orchidee_rcp60_2005soc_co2 ) }
+
+########### CARAIB
+###  HIST
+for (m in 1:4){ print(forcing[m])
+data <- nc_open(paste("/n/holystore01/LABS/mccoll_lab/Lab/aberg/DATA/ISIMIP/HIST/caraib_",
+forcing[m],"_ewembi_historical_histsoc_co2_trans_global_monthly_1861_2005.nc", sep=""))
+lat_caraib <- ncvar_get(data, "lat")[360:1]
+lon_caraib <- ncvar_get(data, "lon")
+trans_caraib_historical_histsoc_co2 <- ncvar_get(data, "trans")[,360:1,]
+nc_close(data)
+number_years <- dim(trans_caraib_historical_histsoc_co2)[3]/12
+bob <- array(NA, dim=c(dim(trans_caraib_historical_histsoc_co2)[1:2], number_years))
+for (a in 1:number_years){print(a)
+bob[,,a] <- apply(trans_caraib_historical_histsoc_co2[,,(12*(a-1)+1):(12*a)], c(1,2), mean)}
+assign(paste("trans_",forcing2[m],"_caraib_historical_histsoc_co2_year",sep=""),bob)
+rm(bob); rm(trans_caraib_historical_histsoc_co2) }
+### RCP60, C02=2005
+for (m in 1:4){ print(forcing[m])
+data <- nc_open(paste("/n/holystore01/LABS/mccoll_lab/Lab/aberg/DATA/ISIMIP/RCP60/caraib_",
+forcing[m],"_ewembi_rcp60_2005soc_2005co2_trans_global_monthly_2006_2099.nc", sep=""))
+trans_caraib_rcp60_2005soc_2005co2 <- ncvar_get(data, "trans")[,360:1,]
+nc_close(data);
+number_years <- dim(trans_caraib_rcp60_2005soc_2005co2 )[3]/12
+bob <- array(NA, dim=c(dim(trans_caraib_rcp60_2005soc_2005co2 )[1:2], number_years))
+for (a in 1:number_years){print(a)
+bob[,,a] <- apply(trans_caraib_rcp60_2005soc_2005co2 [,,(12*(a-1)+1):(12*a)], c(1,2), mean)}
+assign(paste("trans_",forcing2[m],"_caraib_rcp60_2005soc_2005co2_year",sep=""),bob)
+rm(bob); rm(trans_caraib_rcp60_2005soc_2005co2 )}
+### RCP60, CO2=RCP60
+for (m in 1:4){ print(forcing[m])
+data <- nc_open(paste("/n/holystore01/LABS/mccoll_lab/Lab/aberg/DATA/ISIMIP/RCP60/caraib_",
+forcing[m],"_ewembi_rcp60_2005soc_co2_trans_global_monthly_2006_2099.nc", sep=""))
+trans_caraib_rcp60_2005soc_co2 <- ncvar_get(data, "trans")[,360:1,]
+nc_close(data)
+number_years <- dim(trans_caraib_rcp60_2005soc_co2 )[3]/12
+bob <- array(NA, dim=c(dim(trans_caraib_rcp60_2005soc_co2 )[1:2], number_years))
+for (a in 1:number_years){print(a)
+bob[,,a] <- apply(trans_caraib_rcp60_2005soc_co2 [,,(12*(a-1)+1):(12*a)], c(1,2), mean)}
+assign(paste("trans_",forcing2[m],"_caraib_rcp60_2005soc_co2_year",sep=""),bob)
+rm(bob); rm(trans_caraib_rcp60_2005soc_co2 ) }
+
+
+########### VISIT - we don't have trans...
+###  HIST
+for (m in 1:4){ print(forcing[m])
+data <- nc_open(paste("/n/holystore01/LABS/mccoll_lab/Lab/aberg/DATA/ISIMIP/HIST/visit_",
+forcing[m],"_ewembi_historical_histsoc_co2_trans_global_monthly_1861_2005.nc", sep=""))
+lat_visit <- ncvar_get(data, "lat")[360:1]
+lon_visit <- ncvar_get(data, "lon")
+trans_visit_historical_histsoc_co2 <- ncvar_get(data, "trans")[,360:1,]
+nc_close(data)
+number_years <- dim(trans_visit_historical_histsoc_co2)[3]/12
+bob <- array(NA, dim=c(dim(trans_visit_historical_histsoc_co2)[1:2], number_years))
+for (a in 1:number_years){print(a)
+bob[,,a] <- apply(trans_visit_historical_histsoc_co2[,,(12*(a-1)+1):(12*a)], c(1,2), mean)}
+assign(paste("trans_",forcing2[m],"_visit_historical_histsoc_co2_year",sep=""),bob)
+rm(bob); rm(trans_visit_historical_histsoc_co2) }
+### RCP60, C02=2005
+for (m in 1:4){ print(forcing[m])
+data <- nc_open(paste("/n/holystore01/LABS/mccoll_lab/Lab/aberg/DATA/ISIMIP/RCP60/visit_",
+forcing[m],"_ewembi_rcp60_2005soc_2005co2_trans_global_monthly_2006_2099.nc", sep=""))
+trans_visit_rcp60_2005soc_2005co2 <- ncvar_get(data, "trans")[,360:1,]
+nc_close(data);
+number_years <- dim(trans_visit_rcp60_2005soc_2005co2 )[3]/12
+bob <- array(NA, dim=c(dim(trans_visit_rcp60_2005soc_2005co2 )[1:2], number_years))
+for (a in 1:number_years){print(a)
+bob[,,a] <- apply(trans_visit_rcp60_2005soc_2005co2 [,,(12*(a-1)+1):(12*a)], c(1,2), mean)}
+assign(paste("trans_",forcing2[m],"_visit_rcp60_2005soc_2005co2_year",sep=""),bob)
+rm(bob); rm(trans_visit_rcp60_2005soc_2005co2 )}
+### RCP60, CO2=RCP60
+for (m in 1:4){ print(forcing[m])
+data <- nc_open(paste("/n/holystore01/LABS/mccoll_lab/Lab/aberg/DATA/ISIMIP/RCP60/visit_",
+forcing[m],"_ewembi_rcp60_2005soc_co2_trans_global_monthly_2006_2099.nc", sep=""))
+trans_visit_rcp60_2005soc_co2 <- ncvar_get(data, "trans")[,360:1,]
+nc_close(data)
+number_years <- dim(trans_visit_rcp60_2005soc_co2 )[3]/12
+bob <- array(NA, dim=c(dim(trans_visit_rcp60_2005soc_co2 )[1:2], number_years))
+for (a in 1:number_years){print(a)
+bob[,,a] <- apply(trans_visit_rcp60_2005soc_co2 [,,(12*(a-1)+1):(12*a)], c(1,2), mean)}
+assign(paste("trans_",forcing2[m],"_visit_rcp60_2005soc_co2_year",sep=""),bob)
+rm(bob); rm(trans_visit_rcp60_2005soc_co2 ) }
+
+
+
+#######################################################################
+#######################################################################
+#######################################################################
+#######################################################################
+#######################################################################
+#######################################################################
+#######################################################################
+#######################################################################
+#######################################################################
+########################
+### Multi model means (forcings...)
+#forcing <- c("gfdl-esm2m", "ipsl-cm5a-lr", "hadgem2-es", "miroc5")
+### just edit the lines below with the four different veg. models:
+## LPJ_GUESS
+trans_MMM_lpj_guess_historical_histsoc_co2_year <- array(NA, dim=dim(trans_miroc5_lpj_guess_historical_histsoc_co2_year))
+for (i in 1:length(lon_lpj_guess)) {print(i)
+for (j in 1:length(lat_lpj_guess)) {
+bob <- rbind(trans_gfdl_esm2m_lpj_guess_historical_histsoc_co2_year[i,j,],trans_ipsl_cm5a_lr_lpj_guess_historical_histsoc_co2_year[i,j,],
+trans_hadgem2_es_lpj_guess_historical_histsoc_co2_year[i,j,],trans_miroc5_lpj_guess_historical_histsoc_co2_year[i,j,])
+trans_MMM_lpj_guess_historical_histsoc_co2_year[i,j,] <- colMeans(bob, na.rm=T) ; rm(bob) }}
+
+trans_MMM_lpj_guess_rcp60_2005soc_co2_year <- array(NA, dim=dim(trans_miroc5_lpj_guess_rcp60_2005soc_co2_year))
+for (i in 1:length(lon_lpj_guess)) {print(i)
+for (j in 1:length(lat_lpj_guess)) {
+bob <- rbind(trans_gfdl_esm2m_lpj_guess_rcp60_2005soc_co2_year[i,j,],trans_ipsl_cm5a_lr_lpj_guess_rcp60_2005soc_co2_year[i,j,],
+trans_hadgem2_es_lpj_guess_rcp60_2005soc_co2_year[i,j,],trans_miroc5_lpj_guess_rcp60_2005soc_co2_year[i,j,])
+trans_MMM_lpj_guess_rcp60_2005soc_co2_year[i,j,] <- colMeans(bob, na.rm=T)  ; rm(bob)}}
+
+trans_MMM_lpj_guess_rcp60_2005soc_2005co2_year <- array(NA, dim=dim(trans_miroc5_lpj_guess_rcp60_2005soc_2005co2_year))
+for (i in 1:length(lon_lpj_guess)) {print(i)
+for (j in 1:length(lat_lpj_guess)) {
+bob <- rbind(trans_gfdl_esm2m_lpj_guess_rcp60_2005soc_2005co2_year[i,j,],trans_ipsl_cm5a_lr_lpj_guess_rcp60_2005soc_2005co2_year[i,j,],
+trans_hadgem2_es_lpj_guess_rcp60_2005soc_2005co2_year[i,j,],trans_miroc5_lpj_guess_rcp60_2005soc_2005co2_year[i,j,])
+trans_MMM_lpj_guess_rcp60_2005soc_2005co2_year[i,j,] <- colMeans(bob, na.rm=T) ; rm(bob) }}
+
+## ORCHIDEE
+trans_MMM_orchidee_historical_histsoc_co2_year <- array(NA, dim=dim(trans_miroc5_orchidee_historical_histsoc_co2_year))
+for (i in 1:length(lon_orchidee)) {print(i)
+for (j in 1:length(lat_orchidee)) {
+bob <- rbind(trans_gfdl_esm2m_orchidee_historical_histsoc_co2_year[i,j,],trans_ipsl_cm5a_lr_orchidee_historical_histsoc_co2_year[i,j,],
+trans_hadgem2_es_orchidee_historical_histsoc_co2_year[i,j,],trans_miroc5_orchidee_historical_histsoc_co2_year[i,j,])
+trans_MMM_orchidee_historical_histsoc_co2_year[i,j,] <- colMeans(bob, na.rm=T) ; rm(bob) }}
+
+trans_MMM_orchidee_rcp60_2005soc_co2_year <- array(NA, dim=dim(trans_miroc5_orchidee_rcp60_2005soc_co2_year))
+for (i in 1:length(lon_orchidee)) {print(i)
+for (j in 1:length(lat_orchidee)) {
+bob <- rbind(trans_gfdl_esm2m_orchidee_rcp60_2005soc_co2_year[i,j,],trans_ipsl_cm5a_lr_orchidee_rcp60_2005soc_co2_year[i,j,],
+trans_hadgem2_es_orchidee_rcp60_2005soc_co2_year[i,j,],trans_miroc5_orchidee_rcp60_2005soc_co2_year[i,j,])
+trans_MMM_orchidee_rcp60_2005soc_co2_year[i,j,] <- colMeans(bob, na.rm=T)  ; rm(bob)}}
+
+trans_MMM_orchidee_rcp60_2005soc_2005co2_year <- array(NA, dim=dim(trans_miroc5_orchidee_rcp60_2005soc_2005co2_year))
+for (i in 1:length(lon_orchidee)) {print(i)
+for (j in 1:length(lat_orchidee)) {
+bob <- rbind(trans_gfdl_esm2m_orchidee_rcp60_2005soc_2005co2_year[i,j,],trans_ipsl_cm5a_lr_orchidee_rcp60_2005soc_2005co2_year[i,j,],
+trans_hadgem2_es_orchidee_rcp60_2005soc_2005co2_year[i,j,],trans_miroc5_orchidee_rcp60_2005soc_2005co2_year[i,j,])
+trans_MMM_orchidee_rcp60_2005soc_2005co2_year[i,j,] <- colMeans(bob, na.rm=T) ; rm(bob) }}
+
+## VISIT - we don't have it
+trans_MMM_visit_historical_histsoc_co2_year <- array(NA, dim=dim(trans_miroc5_visit_historical_histsoc_co2_year))
+for (i in 1:length(lon_visit)) {print(i)
+for (j in 1:length(lat_visit)) {
+bob <- rbind(trans_gfdl_esm2m_visit_historical_histsoc_co2_year[i,j,],trans_ipsl_cm5a_lr_visit_historical_histsoc_co2_year[i,j,],
+trans_hadgem2_es_visit_historical_histsoc_co2_year[i,j,],trans_miroc5_visit_historical_histsoc_co2_year[i,j,])
+trans_MMM_visit_historical_histsoc_co2_year[i,j,] <- colMeans(bob, na.rm=T) ; rm(bob) }}
+  
+trans_MMM_visit_rcp60_2005soc_co2_year <- array(NA, dim=dim(trans_miroc5_visit_rcp60_2005soc_co2_year))
+for (i in 1:length(lon_visit)) {print(i)
+for (j in 1:length(lat_visit)) {
+bob <- rbind(trans_gfdl_esm2m_visit_rcp60_2005soc_co2_year[i,j,],trans_ipsl_cm5a_lr_visit_rcp60_2005soc_co2_year[i,j,],
+trans_hadgem2_es_visit_rcp60_2005soc_co2_year[i,j,],trans_miroc5_visit_rcp60_2005soc_co2_year[i,j,])
+trans_MMM_visit_rcp60_2005soc_co2_year[i,j,] <- colMeans(bob, na.rm=T)  ; rm(bob)}}
+
+trans_MMM_visit_rcp60_2005soc_2005co2_year <- array(NA, dim=dim(trans_miroc5_visit_rcp60_2005soc_2005co2_year))
+for (i in 1:length(lon_visit)) {print(i)
+for (j in 1:length(lat_visit)) {
+bob <- rbind(trans_gfdl_esm2m_visit_rcp60_2005soc_2005co2_year[i,j,],trans_ipsl_cm5a_lr_visit_rcp60_2005soc_2005co2_year[i,j,],
+trans_hadgem2_es_visit_rcp60_2005soc_2005co2_year[i,j,],trans_miroc5_visit_rcp60_2005soc_2005co2_year[i,j,])
+trans_MMM_visit_rcp60_2005soc_2005co2_year[i,j,] <- colMeans(bob, na.rm=T) ; rm(bob) }}
+
+## CARAIB
+trans_MMM_caraib_historical_histsoc_co2_year <- array(NA, dim=dim(trans_miroc5_caraib_historical_histsoc_co2_year))
+for (i in 1:length(lon_caraib)) {print(i)
+for (j in 1:length(lat_caraib)) {
+bob <- rbind(trans_gfdl_esm2m_caraib_historical_histsoc_co2_year[i,j,],trans_ipsl_cm5a_lr_caraib_historical_histsoc_co2_year[i,j,],
+trans_hadgem2_es_caraib_historical_histsoc_co2_year[i,j,],trans_miroc5_caraib_historical_histsoc_co2_year[i,j,])
+trans_MMM_caraib_historical_histsoc_co2_year[i,j,] <- colMeans(bob, na.rm=T) ; rm(bob) }}
+  
+trans_MMM_caraib_rcp60_2005soc_co2_year <- array(NA, dim=dim(trans_miroc5_caraib_rcp60_2005soc_co2_year))
+for (i in 1:length(lon_caraib)) {print(i)
+for (j in 1:length(lat_caraib)) {
+bob <- rbind(trans_gfdl_esm2m_caraib_rcp60_2005soc_co2_year[i,j,],trans_ipsl_cm5a_lr_caraib_rcp60_2005soc_co2_year[i,j,],
+trans_hadgem2_es_caraib_rcp60_2005soc_co2_year[i,j,],trans_miroc5_caraib_rcp60_2005soc_co2_year[i,j,])
+trans_MMM_caraib_rcp60_2005soc_co2_year[i,j,] <- colMeans(bob, na.rm=T)  ; rm(bob)}}
+
+trans_MMM_caraib_rcp60_2005soc_2005co2_year <- array(NA, dim=dim(trans_miroc5_caraib_rcp60_2005soc_2005co2_year))
+for (i in 1:length(lon_caraib)) {print(i)
+for (j in 1:length(lat_caraib)) {
+bob <- rbind(trans_gfdl_esm2m_caraib_rcp60_2005soc_2005co2_year[i,j,],trans_ipsl_cm5a_lr_caraib_rcp60_2005soc_2005co2_year[i,j,],
+trans_hadgem2_es_caraib_rcp60_2005soc_2005co2_year[i,j,],trans_miroc5_caraib_rcp60_2005soc_2005co2_year[i,j,])
+trans_MMM_caraib_rcp60_2005soc_2005co2_year[i,j,] <- colMeans(bob, na.rm=T) ; rm(bob) }}
+
+
+
+####################################################################
+list_models <- c("caraib", "lpj_guess", "orchidee", "visit")
+png("TRANS_rcp60_allmodels_averageofforcings_withCO2.png", width=1300, height=1200)
+layout(matrix(1:12,4,3, byrow=T))
+for (m in 1:4){print(m)
+lon <- get(paste("lon_",list_models[m], sep=""));lat <- get(paste("lat_",list_models[m], sep=""))
+lowlat <- min(which(lat > -60)); highlat <- min(which(lat > 80))
+trans_fut_co2 <- 86400*apply(get(paste("trans_MMM_", list_models[m], "_rcp60_2005soc_co2_year",sep=""))[,,65:94], c(1,2), mean, na.rm=T)
+trans_pres<- 86400*apply(get(paste("trans_MMM_", list_models[m],"_historical_histsoc_co2_year",sep=""))[,,111:140], c(1,2), mean, na.rm=T)
+trans_fut_co2[trans_fut_co2 > 4 ] <- 4; trans_pres[trans_pres > 4] <- 4
+####
+image.plot(lon, lat[lowlat:highlat], trans_pres[,lowlat:highlat], 
+zlim=c(0,4), col=brewer.pal(8, "YlGnBu"), breaks=seq(0,4,by=0.5),
+main=paste(list_models[m],", HIST, 1971-2000, MMM",sep=""), cex.main=1.5); map(add=T, interior=F)
+####
+image.plot(lon, lat[lowlat:highlat], trans_fut_co2[,lowlat:highlat], zlim=c(0,4), col=brewer.pal(8, "YlGnBu"), breaks=seq(0,4,by=0.5),
+main=paste(list_models[m], ", RCP60, 2070-2099 (CO2=RCP60), MMM", sep=""), cex.main=1.5); map(add=T, interior=F)
+####
+diff  <- trans_fut_co2 - trans_pres; diff[which(diff >1)] <- 1; diff[which(diff < -1)] <- -1;  
+image.plot(lon, lat[lowlat:highlat], diff[,lowlat:highlat], breaks=seq(-1, 1, by=0.05), 
+col=col_custom(40)[40:1], main=paste(list_models[m],", 2070-2099 minus 1971-2000, CO2=RCP60", sep=""), cex.main=1.5);  map(add=T, interior=F) }
+dev.off()
+
+
+##############################################
+### Save data:
+save(trans_gfdl_esm2m_lpj_guess_rcp60_2005soc_2005co2_year, file="save_RData/trans_gfdl_esm2m_lpj_guess_rcp60_2005soc_2005co2_year.RData")
+save(trans_ipsl_cm5a_lr_lpj_guess_rcp60_2005soc_2005co2_year, file="save_RData/trans_ipsl_cm5a_lr_lpj_guess_rcp60_2005soc_2005co2_year.RData")
+save(trans_hadgem2_es_lpj_guess_rcp60_2005soc_2005co2_year, file="save_RData/trans_hadgem2_es_lpj_guess_rcp60_2005soc_2005co2_year.RData")
+save(trans_miroc5_lpj_guess_rcp60_2005soc_2005co2_year, file="save_RData/trans_miroc5_lpj_guess_rcp60_2005soc_2005co2_year.RData")
+
+save(trans_gfdl_esm2m_orchidee_rcp60_2005soc_2005co2_year, file="save_RData/trans_gfdl_esm2m_orchidee_rcp60_2005soc_2005co2_year.RData")
+save(trans_ipsl_cm5a_lr_orchidee_rcp60_2005soc_2005co2_year, file="save_RData/trans_ipsl_cm5a_lr_orchidee_rcp60_2005soc_2005co2_year.RData")
+save(trans_hadgem2_es_orchidee_rcp60_2005soc_2005co2_year, file="save_RData/trans_hadgem2_es_orchidee_rcp60_2005soc_2005co2_year.RData")
+save(trans_miroc5_orchidee_rcp60_2005soc_2005co2_year, file="save_RData/trans_miroc5_orchidee_rcp60_2005soc_2005co2_year.RData")
+
+save(trans_gfdl_esm2m_caraib_rcp60_2005soc_2005co2_year, file="save_RData/trans_gfdl_esm2m_caraib_rcp60_2005soc_2005co2_year.RData")
+save(trans_ipsl_cm5a_lr_caraib_rcp60_2005soc_2005co2_year, file="save_RData/trans_ipsl_cm5a_lr_caraib_rcp60_2005soc_2005co2_year.RData")
+save(trans_hadgem2_es_caraib_rcp60_2005soc_2005co2_year, file="save_RData/trans_hadgem2_es_caraib_rcp60_2005soc_2005co2_year.RData")
+save(trans_miroc5_caraib_rcp60_2005soc_2005co2_year, file="save_RData/trans_miroc5_caraib_rcp60_2005soc_2005co2_year.RData")
+
+#save(trans_gfdl_esm2m_visit_rcp60_2005soc_2005co2_year, file="save_RData/trans_gfdl_esm2m_visit_rcp60_2005soc_2005co2_year.RData")
+#save(trans_ipsl_cm5a_lr_visit_rcp60_2005soc_2005co2_year, file="save_RData/trans_ipsl_cm5a_lr_visit_rcp60_2005soc_2005co2_year.RData")
+#save(trans_hadgem2_es_visit_rcp60_2005soc_2005co2_year, file="save_RData/trans_hadgem2_es_visit_rcp60_2005soc_2005co2_year.RData")
+#save(trans_miroc5_visit_rcp60_2005soc_2005co2_year, file="save_RData/trans_miroc5_visit_rcp60_2005soc_2005co2_year.RData")
+
+
+
+save(trans_gfdl_esm2m_lpj_guess_rcp60_2005soc_co2_year, file="save_RData/trans_gfdl_esm2m_lpj_guess_rcp60_2005soc_co2_year.RData")
+save(trans_ipsl_cm5a_lr_lpj_guess_rcp60_2005soc_co2_year, file="save_RData/trans_ipsl_cm5a_lr_lpj_guess_rcp60_2005soc_co2_year.RData")
+save(trans_hadgem2_es_lpj_guess_rcp60_2005soc_co2_year, file="save_RData/trans_hadgem2_es_lpj_guess_rcp60_2005soc_co2_year.RData")
+save(trans_miroc5_lpj_guess_rcp60_2005soc_co2_year, file="save_RData/trans_miroc5_lpj_guess_rcp60_2005soc_co2_year.RData")
+
+save(trans_gfdl_esm2m_orchidee_rcp60_2005soc_co2_year, file="save_RData/trans_gfdl_esm2m_orchidee_rcp60_2005soc_co2_year.RData")
+save(trans_ipsl_cm5a_lr_orchidee_rcp60_2005soc_co2_year, file="save_RData/trans_ipsl_cm5a_lr_orchidee_rcp60_2005soc_co2_year.RData")
+save(trans_hadgem2_es_orchidee_rcp60_2005soc_co2_year, file="save_RData/trans_hadgem2_es_orchidee_rcp60_2005soc_co2_year.RData")
+save(trans_miroc5_orchidee_rcp60_2005soc_co2_year, file="save_RData/trans_miroc5_orchidee_rcp60_2005soc_co2_year.RData")
+
+save(trans_gfdl_esm2m_caraib_rcp60_2005soc_co2_year, file="save_RData/trans_gfdl_esm2m_caraib_rcp60_2005soc_co2_year.RData")
+save(trans_ipsl_cm5a_lr_caraib_rcp60_2005soc_co2_year, file="save_RData/trans_ipsl_cm5a_lr_caraib_rcp60_2005soc_co2_year.RData")
+save(trans_hadgem2_es_caraib_rcp60_2005soc_co2_year, file="save_RData/trans_hadgem2_es_caraib_rcp60_2005soc_co2_year.RData")
+save(trans_miroc5_caraib_rcp60_2005soc_co2_year, file="save_RData/trans_miroc5_caraib_rcp60_2005soc_co2_year.RData")
+
+#save(trans_gfdl_esm2m_visit_rcp60_2005soc_co2_year, file="save_RData/trans_gfdl_esm2m_visit_rcp60_2005soc_co2_year.RData")
+#save(trans_ipsl_cm5a_lr_visit_rcp60_2005soc_co2_year, file="save_RData/trans_ipsl_cm5a_lr_visit_rcp60_2005soc_co2_year.RData")
+#save(trans_hadgem2_es_visit_rcp60_2005soc_co2_year, file="save_RData/trans_hadgem2_es_visit_rcp60_2005soc_co2_year.RData")
+#save(trans_miroc5_visit_rcp60_2005soc_co2_year, file="save_RData/trans_miroc5_visit_rcp60_2005soc_co2_year.RData")
+
+
+
+save(trans_gfdl_esm2m_lpj_guess_historical_histsoc_co2_year, file="save_RData/trans_gfdl_esm2m_lpj_guess_historical_histsoc_co2_year.RData")
+save(trans_ipsl_cm5a_lr_lpj_guess_historical_histsoc_co2_year, file="save_RData/trans_ipsl_cm5a_lr_lpj_guess_historical_histsoc_co2_year.RData")
+save(trans_hadgem2_es_lpj_guess_historical_histsoc_co2_year, file="save_RData/trans_hadgem2_es_lpj_guess_historical_histsoc_co2_year.RData")
+save(trans_miroc5_lpj_guess_historical_histsoc_co2_year, file="save_RData/trans_miroc5_lpj_guess_historical_histsoc_co2_year.RData")
+
+save(trans_gfdl_esm2m_orchidee_historical_histsoc_co2_year, file="save_RData/trans_gfdl_esm2m_orchidee_historical_histsoc_co2_year.RData")
+save(trans_ipsl_cm5a_lr_orchidee_historical_histsoc_co2_year, file="save_RData/trans_ipsl_cm5a_lr_orchidee_historical_histsoc_co2_year.RData")
+save(trans_hadgem2_es_orchidee_historical_histsoc_co2_year, file="save_RData/trans_hadgem2_es_orchidee_historical_histsoc_co2_year.RData")
+save(trans_miroc5_orchidee_historical_histsoc_co2_year, file="save_RData/trans_miroc5_orchidee_historical_histsoc_co2_year.RData")
+
+save(trans_gfdl_esm2m_caraib_historical_histsoc_co2_year, file="save_RData/trans_gfdl_esm2m_caraib_historical_histsoc_co2_year.RData")
+save(trans_ipsl_cm5a_lr_caraib_historical_histsoc_co2_year, file="save_RData/trans_ipsl_cm5a_lr_caraib_historical_histsoc_co2_year.RData")
+save(trans_hadgem2_es_caraib_historical_histsoc_co2_year, file="save_RData/trans_hadgem2_es_caraib_historical_histsoc_co2_year.RData")
+save(trans_miroc5_caraib_historical_histsoc_co2_year, file="save_RData/trans_miroc5_caraib_historical_histsoc_co2_year.RData")
+
+#save(trans_gfdl_esm2m_visit_historical_histsoc_co2_year, file="save_RData/trans_gfdl_esm2m_visit_historical_histsoc_co2_year.RData")
+#save(trans_ipsl_cm5a_lr_visit_historical_histsoc_co2_year, file="save_RData/trans_ipsl_cm5a_lr_visit_historical_histsoc_co2_year.RData")
+#save(trans_hadgem2_es_visit_historical_histsoc_co2_year, file="save_RData/trans_hadgem2_es_visit_historical_histsoc_co2_year.RData")
+#save(trans_miroc5_visit_historical_histsoc_co2_year, file="save_RData/trans_miroc5_visit_historical_histsoc_co2_year.RData")
+
+
+
+############################################
+#### Just mean TRANS (we have to weigh it, though...)
+
+global_trans_MMM_lpj_guess_hist<- NULL
+global_trans_MMM_lpj_guess_rcp60_co2 <- NULL
+global_trans_MMM_lpj_guess_rcp60_2005co2 <- NULL
+for (t in 1:145) {
+global_trans_MMM_lpj_guess_hist[t] <- weighted.mean(trans_MMM_lpj_guess_historical_histsoc_co2_year[,,t], cell_area, na.rm=T)  }
+for (t in 1:94) {
+global_trans_MMM_lpj_guess_rcp60_co2[t] <- weighted.mean(trans_MMM_lpj_guess_rcp60_2005soc_co2_year[,,t], cell_area, na.rm=T) 
+global_trans_MMM_lpj_guess_rcp60_2005co2[t] <- weighted.mean(trans_MMM_lpj_guess_rcp60_2005soc_2005co2_year[,,t], cell_area, na.rm=T) }
+
+global_trans_MMM_orchidee_hist<- NULL
+global_trans_MMM_orchidee_rcp60_co2 <- NULL
+global_trans_MMM_orchidee_rcp60_2005co2 <- NULL
+for (t in 1:145) {
+global_trans_MMM_orchidee_hist[t] <- sum(trans_MMM_orchidee_historical_histsoc_co2_year[,,t]*cell_area, na.rm=T)/sum(cell_area, na.rm=T)  }
+for (t in 1:94) {
+global_trans_MMM_orchidee_rcp60_co2[t] <- sum(trans_MMM_orchidee_rcp60_2005soc_co2_year[,,t]*cell_area, na.rm=T)/sum(cell_area, na.rm=T) 
+global_trans_MMM_orchidee_rcp60_2005co2[t] <- sum(trans_MMM_orchidee_rcp60_2005soc_2005co2_year[,,t]*cell_area, na.rm=T)/sum(cell_area, na.rm=T) }
+global_trans_MMM_visit_hist<- NULL
+global_trans_MMM_visit_rcp60_co2 <- NULL
+global_trans_MMM_visit_rcp60_2005co2 <- NULL
+for (t in 1:145) {
+global_trans_MMM_visit_hist[t] <- sum(trans_MMM_visit_historical_histsoc_co2_year[,,t]*cell_area, na.rm=T)/sum(cell_area, na.rm=T)  }
+for (t in 1:94) {
+global_trans_MMM_visit_rcp60_co2[t] <- sum(trans_MMM_visit_rcp60_2005soc_co2_year[,,t]*cell_area, na.rm=T)/sum(cell_area, na.rm=T) 
+global_trans_MMM_visit_rcp60_2005co2[t] <- sum(trans_MMM_visit_rcp60_2005soc_2005co2_year[,,t]*cell_area, na.rm=T)/sum(cell_area, na.rm=T) }
+global_trans_MMM_caraib_hist<- NULL
+global_trans_MMM_caraib_rcp60_co2 <- NULL
+global_trans_MMM_caraib_rcp60_2005co2 <- NULL
+for (t in 1:145) {
+global_trans_MMM_caraib_hist[t] <- sum(trans_MMM_caraib_historical_histsoc_co2_year[,,t]*cell_area, na.rm=T)/sum(cell_area, na.rm=T)  }
+for (t in 1:94) {
+global_trans_MMM_caraib_rcp60_co2[t] <- sum(trans_MMM_caraib_rcp60_2005soc_co2_year[,,t]*cell_area, na.rm=T)/sum(cell_area, na.rm=T) 
+global_trans_MMM_caraib_rcp60_2005co2[t] <- sum(trans_MMM_caraib_rcp60_2005soc_2005co2_year[,,t]*cell_area, na.rm=T)/sum(cell_area, na.rm=T) }
+
+
+
+png("global_TRANS_timeseries.png", width=1200, height=800); layout(matrix(1:4, 2,2))
+plot(1861:2005, global_trans_MMM_lpj_guess_hist, xlim=c(1861,2099), ylim=c(1, 3), type="l", xlab="1861-2099",
+main="LPJ_GUESS")
+lines(2006:2099, global_trans_MMM_lpj_guess_rcp60_co2)
+lines(2006:2099, global_trans_MMM_lpj_guess_rcp60_2005co2, col="red")
+#legend("topright", bty="n", col=c("black", "red"), c("HIST soc/CO2, then 2005 soc./ RCP60 CO2", "HIST soc/CO2, then 2005 soc and CO2"), lwd=2)
+abline(v=2005, col="gray")
+text(1950, 0.25, "HIST soc/CO2")
+text(2050, 0.25, "RCP60, soc.=2005 and CO2=2005", col="red")
+text(2050, 0.24, "RCP60, soc.=2005 and CO2=RCP60")
+plot(1861:2005, global_trans_MMM_orchidee_hist, xlim=c(1861,2099), ylim=c(1, 3), type="l", xlab="1861-2099",
+main="ORCHIDEE")
+lines(2006:2099, global_trans_MMM_orchidee_rcp60_co2)
+lines(2006:2099, global_trans_MMM_orchidee_rcp60_2005co2, col="red")
+abline(v=2005, col="gray")
+text(1950, 0.25, "HIST soc/CO2")
+text(2050, 0.25, "RCP60, soc.=2005 and CO2=2005", col="red")
+text(2050, 0.24, "RCP60, soc.=2005 and CO2=RCP60")
+plot(1861:2005, global_trans_MMM_visit_hist, xlim=c(1861,2099), ylim=c(3,6), type="l", xlab="1861-2099",
+main="VISIT")
+lines(2006:2099, global_trans_MMM_visit_rcp60_co2)
+lines(2006:2099, global_trans_MMM_visit_rcp60_2005co2, col="red")
+abline(v=2005, col="gray")
+text(1950, 0.25, "HIST soc/CO2")
+text(2050, 0.25, "RCP60, soc.=2005 and CO2=2005", col="red")
+text(2050, 0.24, "RCP60, soc.=2005 and CO2=RCP60")
+plot(1861:2005, global_trans_MMM_caraib_hist, xlim=c(1861,2099), ylim=c(1, 3), type="l", xlab="1861-2099",
+main="CARAIB")
+lines(2006:2099, global_trans_MMM_caraib_rcp60_co2)
+lines(2006:2099, global_trans_MMM_caraib_rcp60_2005co2, col="red")
+abline(v=2005, col="gray")
+text(1950, 0.25, "HIST soc/CO2")
+text(2050, 0.25, "RCP60, soc.=2005 and CO2=2005", col="red")
+text(2050, 0.24, "RCP60, soc.=2005 and CO2=RCP60")
+dev.off()
+
+
+
+
+

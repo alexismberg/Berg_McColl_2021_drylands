@@ -1,0 +1,801 @@
+################################
+#.libPaths("/n/holystore01/LABS/mccoll_lab/Lab/aberg//R/x86_64-redhat-linux-gnu-library/3.2")
+#library(ncdf, lib="/n/holystore01/LABS/mccoll_lab/Lab/aberg//R/x86_64-redhat-linux-gnu-library/3.2")
+library(colorRamps, lib="/n/holystore01/LABS/mccoll_lab/Lab/aberg//R/x86_64-redhat-linux-gnu-library/3.2")
+library(maps, lib="/n/holystore01/LABS/mccoll_lab/Lab/aberg//R/x86_64-redhat-linux-gnu-library/3.2")
+library(ncdf4, lib="/n/holystore01/LABS/mccoll_lab/Lab/aberg//R/x86_64-redhat-linux-gnu-library/3.2")
+library(fields, lib="/n/holystore01/LABS/mccoll_lab/Lab/aberg//R/x86_64-redhat-linux-gnu-library/3.2")
+library(akima, lib="/n/holystore01/LABS/mccoll_lab/Lab/aberg//R/x86_64-redhat-linux-gnu-library/3.2")
+library(LSD, lib="/n/holystore01/LABS/mccoll_lab/Lab/aberg//R/x86_64-redhat-linux-gnu-library/3.2")
+
+################################################################################################################################
+################################################################################################################################
+################################################################################################################################
+################################################################################################################################
+### Here we calculate the Aridity Index in 1pctCO2, esmFdbk1 and esmFixclim1 from CMIP5
+
+
+### All variables have the same numbers of models 
+## We removed MPI-ESM-LR because it does not have huss for esmFdbk1...
+## We removed NorESM1-ME because it doesn't have sfcWind for esmFdbk1...
+## We removed bcc-csm1-1 because it doesn't have sfcWind for 1pctCO2...
+list_models <- c("CESM1-BGC","CanESM2","GFDL-ESM2M","HadGEM2-ES","IPSL-CM5A-LR")
+list_models2 <- c("CESM1_BGC","CanESM2","GFDL_ESM2M","HadGEM2_ES","IPSL_CM5A_LR")
+
+list_var <- c("tas",  "pr", "rsds", "rlds", "rsus", "rlus", "huss", "sfcWind", "ps", "hfls", "hfss","lai", "mrsos","tran")
+dom <- c("atmos", "atmos", "atmos", "atmos", "atmos", "atmos",   "atmos", "atmos", "atmos", "atmos",  "atmos",   "land", "land", "land")
+#dom2 <- c("Amon", "Amon", "Amon", "Amon", "Amon", "Amon",  "Amon", "Amon", "Amon", "Amon", "Amon", "land", )
+
+### UPDATE !!!!!!!!
+### In fact, now we get mrsos and tran for cor(SM,TRAN)... so we lose HadGEM-ES as a model, because it doesn't have tran...
+### But we get back GFDL-ESM2M, because we don't really need rsds, since we take hfls+hfss
+list_var <- c("tas",  "pr",  "huss", "sfcWind", "ps", "hfls", "hfss","lai", "mrsos","tran")
+dom <- c("atmos", "atmos",    "atmos", "atmos", "atmos", "atmos",  "atmos",   "land", "land", "land")
+list_models <- c("CESM1-BGC","CanESM2","GFDL-ESM2M","IPSL-CM5A-LR")
+list_models2 <- c("CESM1_BGC","CanESM2","GFDL_ESM2M","IPSL_CM5A_LR")
+
+
+
+#################################################################################################################
+################################################ Let's get RAD (esmFdbk1) values ######################
+#for (m in 1:length(list_models)){  print(list_models[m])
+for (m in 1:4){ print(list_models[m])
+m=3
+for (v in 1:10) { print(list_var[v])
+print("Getting data...")
+data <- nc_open(paste("http://strega.ldeo.columbia.edu:81/CMIP5/.byScenario/.esmFdbk1/.",dom[v],"/.mon/.", list_var[v], "/",list_models[m],
+"/.r1i1p1/.",list_var[v],"/dods", sep=""))
+lat <- ncvar_get(data, "lat"); lon<- ncvar_get(data, "lon")
+assign(paste("lat_", list_models2[m], sep=""), lat); assign(paste("lon_", list_models2[m], sep=""), lon)
+bob <- ncvar_get(data, list_var[v])[,, 1:data$dim$T$len]
+numberofyears <- data$dim$T$len/12
+nc_close(data)
+############### Calculating annual means for every variables
+buff <- array(NA, dim=c(dim(bob)[1],dim(bob)[2], numberofyears))
+for (t in 1:numberofyears){buff[,,t] <- apply(bob[ ,, (12*(t-1)+1):(12*(t-1)+12)], c(1,2), mean, na.rm=T)}
+assign(paste(list_var[v],"_",list_models2[m],"_year_esmFdbk1" , sep=""), buff )
+save(buff, file=paste("save_data/",list_var[v],"_",list_models2[m],"_year_esmFdbk1.RData" , sep=""))
+rm(buff)
+assign(list_var[v], bob ) ; rm(bob)}
+################## Calculating PET, open-water (Shuttleworth 1993):
+######
+Lv <- 2.501 # in MJ/Kg
+#Lv <- Lv / 1000000 #now in MJ/kg
+Lv2 <- Lv * 1000000 # J/kg
+#vpsat  <-  0.611 * exp( 17.27 * (tas-273.16) / (tas-273.16 + 237.3) )  # in kPa
+vpsat <-  0.611 * exp( 17.625 * (tas-273.16) / (tas-273.16 + 243.04) )
+delta <- vpsat*4098/(((tas-273.16)+237.3)^2)   # in kPa/C
+## gamma=cp*P/(Lv*MWratio) where MWratio is the ratio of molecular weight of water vapor/dry air=0.622
+#gamma <- 0.665*10^-3* (ps/1000)   # in kPa/C
+gamma <- 1.013e-3/(Lv*0.622) * (ps/1000) ## accounting for varying Lv
+#netrad <- (rsds+rlds-rsus-rlus)   # in W.m-2. Multiply by 86400/1000000 to get MJ.m-2.d-1
+w <- huss/(1-huss)
+es <-  w/(w+0.622)*(ps/1000) # in kPa, so the VPD is in kPa, too.
+rho_3D <- ps /(287.058*1.01*tas)
+cp <-1.013e3 #J.g-1.K-1 = 1013J.kg-1.K-1 ; rho is in kg.m-3; vpsat is in Pa=kg.m-1.s-2, chU in m.s-1;
+### numerator=J.kg-1.K-1*kg.m-3*Pa*m.s-1=Pa.K-1.J.m-2.s-1
+#h <- 0.5
+#zom <- h*0.123 ; zoh <- h*0.0123; d <- 0.67*h
+#Ch <- 0.41^2 / (log((10 - d)/zom)*log((2-d)/zoh)) ## means we have to take wind speed at 10m
+rs <- 70
+############## Open Water Penman - fron Shuttleworth 1993 handbook, equation 4.2.30
+PETow <- 1/(Lv)*( delta/(delta + gamma)*(hfls+hfss)*0.0864 + gamma/(gamma+delta)*(6.43*(1+0.536*sfcWind_2m)*(vpsat-es)))
+assign(paste("PETow_",list_models2[m],"_year_esmFdbk1" , sep=""), PETow )
+save(PETow, file=paste("save_data/PETow_",list_models2[m],"_year_esmFdbk1.RData" , sep=""))
+rm(tas);  rm(pr);  rm(sfcWind); rm(ps); rm(hfls); rm(hfss);rm(lai);rm(PETow)
+}
+
+
+#################################################################################################################
+################################################ Let's get PHYS (esmFixclim1) values ######################
+## We'll have to download wind and ps data first.
+
+for (m in 1:4){ #length(list_models)){  print(list_models[m])
+for (v in 1:10) {                  print(list_var[v])
+print("Getting data...")
+if (v %in% c(4,5)) { data <- nc_open(paste("/n/holystore01/LABS/mccoll_lab/Lab/aberg/DATA/CMIP5/esmFixclim1/",list_var[v],"/",list_var[v],"_Amon_",
+list_models[m],"_esmFixClim1_r1i1p1_allyears.nc", sep=""))  } else if  ((v==1) && (m==3)) {data <- 
+nc_open(paste("/n/holystore01/LABS/mccoll_lab/Lab/aberg/DATA/CMIP5/esmFixclim1/",list_var[v],"/",list_var[v],"_Amon_",
+list_models[m],"_esmFixClim1_r1i1p1_allyears.nc",sep=""))} else if (v==9) {data <-
+nc_open(paste("/n/holystore01/LABS/mccoll_lab/Lab/aberg/DATA/CMIP5/esmFixclim1/",list_var[v],"/",list_var[v],"_Lmon_",
+list_models[m],"_esmFixClim1_r1i1p1_allyears.nc",sep=""))} else {
+data <- nc_open(paste("http://strega.ldeo.columbia.edu:81/CMIP5/.byScenario/.esmFixClim1/.",dom[v],"/.mon/.", list_var[v], "/",list_models[m],
+"/.r1i1p1/.",list_var[v],"/dods", sep="")) }
+if ( names(data$dim)[1] == "T") {len <- 1:data$dim$T$len} else  {len <- 1:data$dim$time$len }
+bob <- ncvar_get(data, list_var[v])[,, len]
+numberofyears <- length(len)/12
+nc_close(data)
+############### Calculating annual means for every variables
+buff <- array(NA, dim=c(dim(bob)[1],dim(bob)[2], numberofyears))
+for (t in 1:numberofyears){buff[,,t] <- apply(bob[ ,, (12*(t-1)+1):(12*(t-1)+12)], c(1,2), mean, na.rm=T)}
+assign(paste(list_var[v],"_",list_models2[m],"_year_esmFixclim1" , sep=""), buff )
+save(buff, file=paste("save_data/",list_var[v],"_",list_models2[m],"_year_esmFixclim1.RData" , sep=""))
+rm(buff)
+assign(list_var[v], bob ) ; rm(bob)}
+############## Calculating PET, open-water (Shuttleworth 1993):
+######
+sfcWind_2m <- sfcWind*4.87/(log(67.8*10-5.42) )
+Lv <- 2.501 # in MJ/Kg
+Lv2 <- Lv * 1000000 # J/kg
+vpsat <-  0.611 * exp( 17.625 * (tas-273.16) / (tas-273.16 + 243.04) )
+delta <- vpsat*4098/(((tas-273.16)+237.3)^2)   # in kPa/C
+## gamma=cp*P/(Lv*MWratio) where MWratio is the ratio of molecular weight of water vapor/dry air=0.622
+gamma <- 0.665*10^-3* (ps/1000)   # in kPa/C
+#gamma <- 1.013e-3/(Lv*0.622) * (ps/1000) ## accounting for varying Lv
+#netrad <- (rsds+rlds-rsus-rlus)   # in W.m-2. Multiply by 86400/1000000 to get MJ.m-2.d-1
+w <- huss/(1-huss)
+es <-  w/(w+0.622)*(ps/1000) # in kPa, so the VPD is in kPa, too.
+rho_3D <- ps /(287.058*1.01*tas)
+cp <-1.013e3 #J.g-1.K-1 = 1013J.kg-1.K-1 ; rho is in kg.m-3; vpsat is in Pa=kg.m-1.s-2, chU in m.s-1;
+### numerator=J.kg-1.K-1*kg.m-3*Pa*m.s-1=Pa.K-1.J.m-2.s-1
+#h <- 0.5 #zom <- h*0.123 ; zoh <- h*0.0123; d <- 0.67*h
+#Ch <- 0.41^2 / (log((10 - d)/zom)*log((2-d)/zoh)) ## means we have to take wind speed at 10m
+rs <- 70
+############## Open Water Penman - fron Shuttleworth 1993 handbook, equation 4.2.30
+PETow <- 1/(Lv)*( delta/(delta + gamma)*(hfls+hfss)*0.0864 + gamma/(gamma+delta)*(6.43*(1+0.536*sfcWind_2m)*(vpsat-es)))
+# Let's just take PM and zero out stomatal resistance:
+assign(paste("PETow_",list_models2[m],"_year_esmFixclim1" , sep=""), PETow )
+save(PETow, file=paste("save_data/PETow_",list_models2[m],"_year_esmFixclim1.RData" , sep=""))
+rm(tas);  rm(pr); rm(huss); rm(sfcWind); rm(ps); rm(hfls); rm(hfss);rm(lai); rm(PETow)
+}
+
+#################################################################################################################
+################################################ Let's get CTL (1pctCO2) values ######################
+# missing LAI for CESM, HadGEM2-ES - fixed: we don't use HadGEM2-ES anymore
+
+for (m in 1:length(list_models)){  print(list_models[m])
+for (v in 1:10) { print(list_var[v])
+print("Getting data...")
+if ((m==1) && (v==8)) { #LAI for CESM1-BGC
+nc_open(paste("/n/holystore01/LABS/mccoll_lab/Lab/aberg/DATA/CMIP5/1pctCO2/",list_var[v],"_Lmon_",list_models[m],"_1pctCO2_r1i1p1_185912-199912.nc",
+sep="")) } else if ((m %in% c(1,3)) && (v==10)) { #Tran for CESM1-BGC and GFDL-ESM2M
+data <- nc_open(paste("/n/holystore01/LABS/mccoll_lab/Lab/aberg/DATA/CMIP5/",list_var[v],"/1pctCO2/",
+list_var[v],"_Lmon_",list_models[m],"_1pctCO2_r1i1p1_allyears.nc",sep="")) } else if ( (m==3) && (v==9)) { #mrsos for GFDL-ESM2M
+data <- nc_open(paste("/n/holystore01/LABS/mccoll_lab/Lab/aberg/DATA/CMIP5/1pctCO2/",
+list_var[v],"_Lmon_",list_models[m],"_1pctCO2_r1i1p1_allyears.nc",sep="")) } else 
+{ data <- nc_open(paste("http://strega.ldeo.columbia.edu:81/CMIP5/.byScenario/.1pctCO2/.",dom[v],"/.mon/.", list_var[v], "/",list_models[m],
+"/.r1i1p1/.",list_var[v],"/dods", sep=""))}
+bob <- ncvar_get(data, list_var[v]); duration <- dim(bob)[3]
+numberofyears <- duration/12
+nc_close(data)
+############### Calculating annual means for every variables
+buff <- array(NA, dim=c(dim(bob)[1],dim(bob)[2], numberofyears))
+for (t in 1:numberofyears){buff[,,t] <- apply(bob[ ,, (12*(t-1)+1):(12*(t-1)+12)], c(1,2), mean, na.rm=T)}
+assign(paste(list_var[v],"_",list_models2[m],"_year_1pctCO2" , sep=""), buff )
+save(buff, file=paste("save_data/",list_var[v],"_",list_models2[m],"_year_1pctCO2.RData" , sep=""))
+rm(buff)
+assign(list_var[v], bob ) ; rm(bob)}
+############## Calculating PET, open-water (Shuttleworth 1993):
+######
+Lv <- 2.501 # in MJ/Kg
+Lv2 <- Lv * 1000000 # J/kg
+vpsat <-  0.611 * exp( 17.625 * (tas-273.16) / (tas-273.16 + 243.04) )
+delta <- vpsat*4098/(((tas-273.16)+237.3)^2)   # in kPa/C
+## gamma=cp*P/(Lv*MWratio) where MWratio is the ratio of molecular weight of water vapor/dry air=0.622
+gamma <- 0.665*10^-3* (ps/1000)   # in kPa/C
+#gamma <- 1.013e-3/(Lv*0.622) * (ps/1000) ## accounting for varying Lv
+#netrad <- (rsds+rlds-rsus-rlus)   # in W.m-2. Multiply by 86400/1000000 to get MJ.m-2.d-1
+w <- huss/(1-huss)
+es <-  w/(w+0.622)*(ps/1000) # in kPa, so the VPD is in kPa, too.
+rho_3D <- ps /(287.058*1.01*tas)
+cp <-1.013e3 #J.g-1.K-1 = 1013J.kg-1.K-1 ; rho is in kg.m-3; vpsat is in Pa=kg.m-1.s-2, chU in m.s-1;
+### numerator=J.kg-1.K-1*kg.m-3*Pa*m.s-1=Pa.K-1.J.m-2.s-1
+#h <- 0.5 #zom <- h*0.123 ; zoh <- h*0.0123; d <- 0.67*h
+#Ch <- 0.41^2 / (log((10 - d)/zom)*log((2-d)/zoh)) ## means we have to take wind speed at 10m
+rs <- 70
+############## Open Water Penman - fron Shuttleworth 1993 handbook, equation 4.2.30
+PETow <- 1/(Lv)*( delta/(delta + gamma)*(hfls+hfss)*0.0864 + gamma/(gamma+delta)*(6.43*(1+0.536*sfcWind_2m)*(vpsat-es)))
+# Let's just take PM and zero out stomatal resistance:
+assign(paste("PETow_",list_models2[m],"_year_1pctCO2" , sep=""), PETow )
+save(PETow, file=paste("save_data/PETow_",list_models2[m],"_year_1pctCO2.RData" , sep=""))
+rm(tas);  rm(pr); rm(rsds); rm(rlds); rm(rsus); rm(rlus); rm(huss); rm(sfcWind); rm(ps); rm(hfls); rm(hfss);rm(lai); rm(PETow)
+}
+
+
+# missing LAI for CESM, HadGEM2-ES
+v <-12
+m <- 1 
+data <- nc_open(paste("/n/holystore01/LABS/mccoll_lab/Lab/aberg/DATA/CMIP5/", list_var[v],"/1pctCO2/",list_var[v],"_Lmon_",list_models[m],"_1pctCO2_r1i1p1_000101-014012.nc", sep=""))
+bob <- ncvar_get(data, list_var[v])[,, 1:data$dim$time$len]
+numberofyears <- data$dim$time$len/12
+nc_close(data)
+buff <- array(NA, dim=c(dim(bob)[1],dim(bob)[2], numberofyears))
+for (t in 1:numberofyears){buff[,,t] <- apply(bob[ ,, (12*(t-1)+1):(12*(t-1)+12)], c(1,2), mean, na.rm=T)}
+assign(paste(list_var[v],"_",list_models2[m],"_year_1pctCO2" , sep=""), buff )
+save(buff, file=paste("save_data/",list_var[v],"_",list_models2[m],"_year_1pctCO2.RData" , sep=""))
+rm(buff)
+
+
+
+##############################################################################################
+##############################################################################################
+##############################################################################################
+##############################################################################################
+##############################################################################################
+##############################################################################################
+##############################################################################################
+##############################################################################################
+##############################################################################################
+##############################################################################################
+##############################################################################################
+#### Getting mean values, for the preesnt:
+
+### We add PETow to the list of variables:
+list_var <- append(list_var, "PETow")
+
+#### esmFixclim1
+for (v in 1:10){ print(list_var[v])
+for (m in 1:4) {   #1:length(list_models2)) {  
+print(list_models[m])
+lat <- get(paste("lat_", list_models2[m], sep=""))
+lon <- get(paste("lon_", list_models2[m], sep=""))
+var_year <- get(paste(list_var[v],"_", list_models2[m],"_year_esmFixclim1", sep="") )
+assign(paste("mean_",list_var[v],"_", list_models2[m],"_year_pres_esmFixclim1", sep=""), apply(var_year[,,1:20], c(1,2), mean,na.rm=T )) }}
+v=11 ### It's monthly!!!!
+for (m in 1:length(list_models2)) {  print(list_models[m])
+var_year <- get(paste(list_var[v],"_", list_models2[m],"_year_esmFixclim1", sep="") )
+assign(paste("mean_",list_var[v],"_", list_models2[m],"_year_pres_esmFixclim1", sep=""), apply(var_year[,,1:240], c(1,2), mean,na.rm=T )) }
+
+
+#### esmFdbk1
+for (v in 1:10){
+print(list_var[v])
+for (m in 1:4) {   #1:length(list_models2)) {    #models
+print(list_models[m])
+lat <- get(paste("lat_", list_models2[m], sep=""))
+lon <- get(paste("lon_", list_models2[m], sep=""))
+var_year <- get(paste(list_var[v],"_", list_models2[m],"_year_esmFdbk1", sep="") )
+assign(paste("mean_",list_var[v],"_", list_models2[m],"_year_pres_esmFdbk1", sep=""), apply(var_year[,,1:20], c(1,2), mean,na.rm=T )) }}
+v=11 ### It's monthly!!!!
+for (m in 1:4) {   #1:length(list_models2)) {  print(list_models[m])
+var_year <- get(paste(list_var[v],"_", list_models2[m],"_year_esmFdbk1", sep="") )
+assign(paste("mean_",list_var[v],"_", list_models2[m],"_year_pres_esmFdbk1", sep=""), apply(var_year[,,1:240], c(1,2), mean,na.rm=T )) }
+
+#### 1pctCO2
+for (v in 1:10){
+print(list_var[v])
+for (m in 1:4) {   #1:length(list_models2)) {    #models
+print(list_models[m])
+lat <- get(paste("lat_", list_models2[m], sep=""))
+lon <- get(paste("lon_", list_models2[m], sep=""))
+var_year <- get(paste(list_var[v],"_", list_models2[m],"_year_1pctCO2", sep="") )
+assign(paste("mean_",list_var[v],"_", list_models2[m],"_year_pres_1pctCO2", sep=""), apply(var_year[,,1:20], c(1,2), mean,na.rm=T )) }}
+v=11 ### It's monthly!!!!
+for (m in 1:4) {   #1:length(list_models2)) {  print(list_models[m])
+var_year <- get(paste(list_var[v],"_", list_models2[m],"_year_1pctCO2", sep="") )
+assign(paste("mean_",list_var[v],"_", list_models2[m],"_year_pres_1pctCO2", sep=""), apply(var_year[,,1:240], c(1,2), mean,na.rm=T )) }
+
+
+################################################################################################
+################################################################################################
+################ Let's get mean  values, for the future
+# Dimensions for each model:
+for (m in 1:4) {   #1:length(list_models2)) {    #models
+print(dim(get(paste(list_var[v],"_", list_models2[m],"_year_esmFdbk1", sep="") ))) }
+# It's only 200 for GFDL-ESM2M
+# We are going to take years 120-140 (in "GFDL-ESM2M",  "MPI_ESM_LR" and  "NorESM1_ME"  it just goes longer after that).
+
+#### esmFixclim1
+for (v in 1:10){
+print(list_var[v])
+for (m in 1:4) {   #1:length(list_models2)) {    #models
+print(list_models[m])
+lat <- get(paste("lat_", list_models2[m], sep=""))
+lon <- get(paste("lon_", list_models2[m], sep=""))
+var_year <- get(paste(list_var[v],"_", list_models2[m],"_year_esmFixclim1", sep="") )
+assign(paste("mean_",list_var[v],"_", list_models2[m],"_year_fut_esmFixclim1", sep=""), apply(var_year[,,121:140], c(1,2), mean,na.rm=T )) }}
+v=11 ### It's monthly!!!!
+for (m in 1:4) {   #1:length(list_models2)) {  print(list_models[m])
+var_year <- get(paste(list_var[v],"_", list_models2[m],"_year_esmFixclim1", sep="") )
+assign(paste("mean_",list_var[v],"_", list_models2[m],"_year_fut_esmFixclim1", sep=""), apply(var_year[,,1441:1680], c(1,2), mean,na.rm=T )) }
+
+#### esmFdbk1
+for (v in 1:10){
+print(list_var[v])
+for (m in 1:4) {   #1:length(list_models2)) {    #models
+print(list_models[m])
+lat <- get(paste("lat_", list_models2[m], sep=""))
+lon <- get(paste("lon_", list_models2[m], sep=""))
+var_year <- get(paste(list_var[v],"_", list_models2[m],"_year_esmFdbk1", sep="") )
+assign(paste("mean_",list_var[v],"_", list_models2[m],"_year_fut_esmFdbk1", sep=""), apply(var_year[,,121:140], c(1,2), mean,na.rm=T )) }}
+v=11 ### It's monthly!!!!
+for (m in 1:4) {   #1:length(list_models2)) {  print(list_models[m])
+var_year <- get(paste(list_var[v],"_", list_models2[m],"_year_esmFdbk1", sep="") )
+assign(paste("mean_",list_var[v],"_", list_models2[m],"_year_fut_esmFdbk1", sep=""), apply(var_year[,,1441:1680], c(1,2), mean,na.rm=T )) }
+
+#### 1pctCO2
+for (v in 1:10){
+print(list_var[v])
+for (m in 1:4) {   #1:length(list_models2)) {    #models
+print(list_models[m])
+lat <- get(paste("lat_", list_models2[m], sep=""))
+lon <- get(paste("lon_", list_models2[m], sep=""))
+var_year <- get(paste(list_var[v],"_", list_models2[m],"_year_1pctCO2", sep="") )
+assign(paste("mean_",list_var[v],"_", list_models2[m],"_year_fut_1pctCO2", sep=""), apply(var_year[,,121:140], c(1,2), mean,na.rm=T )) }}
+v=11 ### It's monthly!!!!
+for (m in 1:4) {   #1:length(list_models2)) {  print(list_models[m])
+var_year <- get(paste(list_var[v],"_", list_models2[m],"_year_1pctCO2", sep="") )
+assign(paste("mean_",list_var[v],"_", list_models2[m],"_year_fut_1pctCO2", sep=""), apply(var_year[,,1441:1680], c(1,2), mean,na.rm=T )) }
+
+##################################################################################################################
+##################################################################################################################
+##################################################################################################################
+##################################################################################################################
+##########  MASKS
+####### Get masks for new models
+for (m in 1:length(list_models)) {
+print(list_models[m])
+data <- nc_open(paste("http://strega.ldeo.columbia.edu:81/CMIP5/.byScenario/.fixed/.atmos/.",list_models[m],"/.sftlf.nc/dods", sep=""))
+lat <- ncvar_get(data, "lat"); lon<- ncvar_get(data, "lon")
+assign(paste("lat_", list_models2[m], sep=""), lat); assign(paste("lon_", list_models2[m], sep=""), lon)
+mask<-ncvar_get(data, "sftlf")
+if (max(mask, na.rm=T) == 100){mask <- mask/100}
+mask[which(mask ==1 )] <- 1
+mask[which(mask < 1)] <- NA
+## removing Antartica !!!
+lowlat <- min(which(lat > -60))
+mask[,1:lowlat]<- NA
+## let's define Greenland
+mask_greenland <- array(1, dim=c(length(lon), length(lat)))
+for (i in 1:length(lon)){
+for (j in 1:length(lat)){
+if ( ( lat[j] > 60) && (lon[i] > 360-60) && ( lon[i] < 335 )) {mask_greenland[i,j] <- NA }
+if ( ( lat[j] > 66) && (lon[i] > 360-60) && ( lon[i] < 355 )) {mask_greenland[i,j] <- NA }
+if ( ( lat[j] > 70) && (lon[i] > 360-70) && ( lon[i] < 355 )) {mask_greenland[i,j] <- NA }
+}}
+### REMOVING GREENLAND !!!
+mask <- mask * mask_greenland
+assign(paste("mask_",list_models2[m], sep=""), mask)
+}
+
+
+## We are going to make a plot just like Fig 2 in Leo's PNAS paper.
+## Creating a mask:
+bill<- mean_lai_CESM1_BGC_year_pres_esmFdbk1
+bill<- mask_CESM1_BGC
+bill[which(is.na(bill)==F)]<- 1
+bill[which(is.na(bill)==T)]<- 0
+library(akima)
+mask_2x2 <- bicubic.grid(lon_CESM1_BGC, lat_CESM1_BGC, bill, xlim=c(0,360), ylim=c(-90,90), dx=2, dy=2 )
+mask_2x2_NAs <- mask_2x2$z
+mask_2x2_NAs[which(mask_2x2_NAs==0)] <- NA
+mask_2x2_NAs[which(mask_2x2_NAs < 1)] <- NA
+mask_2x2_NAs[which(mask_2x2_NAs > 1)] <- 1
+load("../correlations/RData_files/lon.RData");load("../correlations/RData_files/lat.RData")
+lowlat <- min(which(lat > -60)); highlat <- min(which(lat > 80))
+mask_greenland <- array(1, dim=c(length(lon), length(lat)))
+for (i in 1:length(lon)){
+for (j in 1:length(lat)){
+if ( ( lat[j] > 60) && (lon[i] > 360-60) && ( lon[i] < 335 )) {mask_greenland[i,j] <- NA }
+if ( ( lat[j] > 66) && (lon[i] > 360-60) && ( lon[i] < 355 )) {mask_greenland[i,j] <- NA }
+if ( ( lat[j] > 70) && (lon[i] > 360-70) && ( lon[i] < 355 )) {mask_greenland[i,j] <- NA }
+}}
+### REMOVING GREENLAND !!!
+mask_2x2_NAs <- mask_2x2_NAs * mask_greenland
+
+
+##########################################################################################################################
+##########################################################################################################################
+##########################################################################################################################
+##########################################################################################################################
+##########################################################################################################################
+##########################################################################################################################
+##########################################################################################################################
+##########################################################################################################################
+##########################################################################################################################
+########################### Let's create list_var in 2x2 for every model
+
+### pres_1pctCO2
+for (v in 11:11){
+print(list_var[v])
+for (m in 1:4){ #:length(list_models)){       #models
+print(list_models2[m])
+lat <- get(paste("lat_", list_models2[m], sep=""))
+lon <- get(paste("lon_", list_models2[m], sep=""))
+mean_var_year_pres_1pctCO2 <- get( paste("mean_",list_var[v],"_",list_models2[m],"_year_pres_1pctCO2", sep=""))
+mean_var_year_pres_1pctCO2[which(is.na(mean_var_year_pres_1pctCO2)==T)] <- 0
+mean_var_year_pres_1pctCO2_2x2 <- bicubic.grid(lon, lat, mean_var_year_pres_1pctCO2, xlim=c(0,360), ylim=c(-90,90), dx=2, dy=2 )$z
+assign(paste(paste("mean_",list_var[v],"_",list_models2[m],"_year_pres_1pctCO2_2x2", sep="")), mean_var_year_pres_1pctCO2_2x2)
+rm(lon); rm(lat); rm(mean_var_year_pres_1pctCO2); rm(mean_var_year_pres_1pctCO2_2x2)}}
+### Pr/PET
+for (m in 1:4){ #:length(list_models)){       #models
+print(list_models2[m])
+lat <- get(paste("lat_", list_models2[m], sep=""))
+lon <- get(paste("lon_", list_models2[m], sep=""))
+mean_pr_year_pres_1pctCO2 <- get( paste("mean_pr_",list_models2[m],"_year_pres_1pctCO2", sep=""))*86400
+mean_PET_year_pres_1pctCO2 <- get( paste("mean_PETow_",list_models2[m],"_year_pres_1pctCO2", sep=""))
+mean_PrPET_year_pres_1pctCO2_2x2 <- bicubic.grid(lon, lat, mean_pr_year_pres_1pctCO2/mean_PET_year_pres_1pctCO2, xlim=c(0,360), ylim=c(-90,90), dx=2, dy=2 )$z
+assign(paste(paste("mean_PrPET_",list_models2[m],"_year_pres_1pctCO2_2x2", sep="")), mean_PrPET_year_pres_1pctCO2_2x2)
+rm(lon); rm(lat); rm(mean_PrPET_year_pres_1pctCO2_2x2); rm(mean_pr_year_pres_1pctCO2); rm(mean_PET_year_pres_1pctCO2)}
+
+### fut_1pctCO2
+for (v in 11:11){
+print(list_var[v])
+for (m in 1:4){ #:length(list_models)){       #models
+print(list_models2[m])
+lat <- get(paste("lat_", list_models2[m], sep=""))
+lon <- get(paste("lon_", list_models2[m], sep=""))
+mean_var_year_fut_1pctCO2 <- get( paste("mean_",list_var[v],"_",list_models2[m],"_year_fut_1pctCO2", sep=""))
+mean_var_year_fut_1pctCO2[which(is.na(mean_var_year_fut_1pctCO2)==T)] <- 0
+mean_var_year_fut_1pctCO2_2x2 <- bicubic.grid(lon, lat, mean_var_year_fut_1pctCO2, xlim=c(0,360), ylim=c(-90,90), dx=2, dy=2 )$z
+assign(paste(paste("mean_",list_var[v],"_",list_models2[m],"_year_fut_1pctCO2_2x2", sep="")), mean_var_year_fut_1pctCO2_2x2)
+rm(lon); rm(lat);rm(mean_var_year_fut_1pctCO2); rm(mean_var_year_fut_1pctCO2_2x2) }}
+### Pr/PET
+for (m in 1:4){ #:length(list_models)){       #models
+print(list_models2[m])
+lat <- get(paste("lat_", list_models2[m], sep=""))
+lon <- get(paste("lon_", list_models2[m], sep=""))
+mean_pr_year_fut_1pctCO2 <- get( paste("mean_pr_",list_models2[m],"_year_fut_1pctCO2", sep=""))*86400
+mean_PET_year_fut_1pctCO2 <- get( paste("mean_PETow_",list_models2[m],"_year_fut_1pctCO2", sep=""))
+mean_PrPET_year_fut_1pctCO2_2x2 <- bicubic.grid(lon, lat, mean_pr_year_fut_1pctCO2/mean_PET_year_fut_1pctCO2, xlim=c(0,360), ylim=c(-90,90), dx=2, dy=2 )$z
+assign(paste(paste("mean_PrPET_",list_models2[m],"_year_fut_1pctCO2_2x2", sep="")), mean_PrPET_year_fut_1pctCO2_2x2)
+rm(lon); rm(lat); rm(mean_PrPET_year_fut_1pctCO2_2x2); rm(mean_pr_year_fut_1pctCO2); rm(mean_PET_year_fut_1pctCO2)}
+
+######################
+### pres_esmFixclim1
+for (v in 11:11){
+print(list_var[v])
+for (m in 1:4){ #:length(list_models)){       #models
+print(list_models2[m])
+lat <- get(paste("lat_", list_models2[m], sep=""))
+lon <- get(paste("lon_", list_models2[m], sep=""))
+mean_var_year_pres_esmFixclim1 <- get( paste("mean_",list_var[v],"_",list_models2[m],"_year_pres_esmFixclim1", sep=""))
+mean_var_year_pres_esmFixclim1[which(is.na(mean_var_year_pres_esmFixclim1)==T)] <- 0
+mean_var_year_pres_esmFixclim1_2x2 <- bicubic.grid(lon, lat, mean_var_year_pres_esmFixclim1, xlim=c(0,360), ylim=c(-90,90), dx=2, dy=2 )$z
+assign(paste(paste("mean_",list_var[v],"_",list_models2[m],"_year_pres_esmFixclim1_2x2", sep="")), mean_var_year_pres_esmFixclim1_2x2)
+rm(lon); rm(lat);rm(mean_var_year_pres_esmFixclim1); rm(mean_var_year_pres_esmFixclim1_2x2)}}
+### Pr/PET
+for (m in 1:4){ #:length(list_models)){       #models
+print(list_models2[m])
+lat <- get(paste("lat_", list_models2[m], sep=""))
+lon <- get(paste("lon_", list_models2[m], sep=""))
+mean_pr_year_pres_esmFixclim1 <- get( paste("mean_pr_",list_models2[m],"_year_pres_esmFixclim1", sep=""))*86400
+mean_PET_year_pres_esmFixclim1 <- get( paste("mean_PETow_",list_models2[m],"_year_pres_esmFixclim1", sep=""))
+mean_PrPET_year_pres_esmFixclim1_2x2 <- bicubic.grid(lon, lat, mean_pr_year_pres_esmFixclim1/mean_PET_year_pres_esmFixclim1, xlim=c(0,360), ylim=c(-90,90), dx=2, dy=2 )$z
+assign(paste(paste("mean_PrPET_",list_models2[m],"_year_pres_esmFixclim1_2x2", sep="")), mean_PrPET_year_pres_esmFixclim1_2x2)
+rm(lon); rm(lat); rm(mean_PrPET_year_pres_esmFixclim1_2x2); rm(mean_pr_year_pres_esmFixclim1); rm(mean_PET_year_pres_esmFixclim1)}
+
+### fut_esmFixclim1
+for (v in 11:11){
+print(list_var[v])
+for (m in 1:4){ #:length(list_models)){       #models
+print(list_models2[m])
+lat <- get(paste("lat_", list_models2[m], sep=""))
+lon <- get(paste("lon_", list_models2[m], sep=""))
+mean_var_year_fut_esmFixclim1 <- get( paste("mean_",list_var[v],"_",list_models2[m],"_year_fut_esmFixclim1", sep=""))
+mean_var_year_fut_esmFixclim1[which(is.na(mean_var_year_fut_esmFixclim1)==T)] <- 0
+mean_var_year_fut_esmFixclim1_2x2 <- bicubic.grid(lon, lat, mean_var_year_fut_esmFixclim1, xlim=c(0,360), ylim=c(-90,90), dx=2, dy=2 )$z
+assign(paste(paste("mean_",list_var[v],"_",list_models2[m],"_year_fut_esmFixclim1_2x2", sep="")), mean_var_year_fut_esmFixclim1_2x2)
+rm(lon); rm(lat);rm(mean_var_year_fut_esmFixclim1); rm(mean_var_year_fut_esmFixclim1_2x2)}}
+### Pr/PET
+for (m in 1:4){ #:length(list_models)){       #models
+print(list_models2[m])
+lat <- get(paste("lat_", list_models2[m], sep=""))
+lon <- get(paste("lon_", list_models2[m], sep=""))
+mean_pr_year_fut_esmFixclim1 <- get( paste("mean_pr_",list_models2[m],"_year_fut_esmFixclim1", sep=""))*86400
+mean_PET_year_fut_esmFixclim1 <- get( paste("mean_PETow_",list_models2[m],"_year_fut_esmFixclim1", sep=""))
+mean_PrPET_year_fut_esmFixclim1_2x2 <- bicubic.grid(lon, lat, mean_pr_year_fut_esmFixclim1/mean_PET_year_fut_esmFixclim1, xlim=c(0,360), ylim=c(-90,90), dx=2, dy=2 )$z
+assign(paste(paste("mean_PrPET_",list_models2[m],"_year_fut_esmFixclim1_2x2", sep="")), mean_PrPET_year_fut_esmFixclim1_2x2)
+rm(lon); rm(lat); rm(mean_PrPET_year_fut_esmFixclim1_2x2); rm(mean_pr_year_fut_esmFixclim1); rm(mean_PET_year_fut_esmFixclim1)}
+
+### pres_esmFdbk1
+for (v in 11:11){
+print(list_var[v])
+for (m in 1:4){ #:length(list_models)){       #models
+print(list_models2[m])
+lat <- get(paste("lat_", list_models2[m], sep=""))
+lon <- get(paste("lon_", list_models2[m], sep=""))
+mean_var_year_pres_esmFdbk1 <- get( paste("mean_",list_var[v],"_",list_models2[m],"_year_pres_esmFdbk1", sep=""))
+mean_var_year_pres_esmFdbk1[which(is.na(mean_var_year_pres_esmFdbk1)==T)] <- 0
+mean_var_year_pres_esmFdbk1_2x2 <- bicubic.grid(lon, lat, mean_var_year_pres_esmFdbk1, xlim=c(0,360), ylim=c(-90,90), dx=2, dy=2 )$z
+assign(paste(paste("mean_",list_var[v],"_",list_models2[m],"_year_pres_esmFdbk1_2x2", sep="")), mean_var_year_pres_esmFdbk1_2x2)
+rm(lon); rm(lat);rm(mean_var_year_pres_esmFdbk1); rm(mean_var_year_pres_esmFdbk1_2x2) }}
+### Pr/PET
+for (m in 1:4){ #:length(list_models)){       #models
+print(list_models2[m])
+lat <- get(paste("lat_", list_models2[m], sep=""))
+lon <- get(paste("lon_", list_models2[m], sep=""))
+mean_pr_year_pres_esmFdbk1 <- get( paste("mean_pr_",list_models2[m],"_year_pres_esmFdbk1", sep=""))*86400
+mean_PET_year_pres_esmFdbk1 <- get( paste("mean_PETow_",list_models2[m],"_year_pres_esmFdbk1", sep=""))
+mean_PrPET_year_pres_esmFdbk1_2x2 <- bicubic.grid(lon, lat, mean_pr_year_pres_esmFdbk1/mean_PET_year_pres_esmFdbk1, xlim=c(0,360), ylim=c(-90,90), dx=2, dy=2 )$z
+assign(paste(paste("mean_PrPET_",list_models2[m],"_year_pres_esmFdbk1_2x2", sep="")), mean_PrPET_year_pres_esmFdbk1_2x2)
+rm(lon); rm(lat); rm(mean_PrPET_year_pres_esmFdbk1_2x2); rm(mean_pr_year_pres_esmFdbk1); rm(mean_PET_year_pres_esmFdbk1)}
+
+### fut_esmFdbk1
+for (v in 11:11){
+print(list_var[v])
+for (m in 1:4){ #:length(list_models)){       #models
+print(list_models2[m])
+lat <- get(paste("lat_", list_models2[m], sep=""))
+lon <- get(paste("lon_", list_models2[m], sep=""))
+mean_var_year_fut_esmFdbk1 <- get( paste("mean_",list_var[v],"_",list_models2[m],"_year_fut_esmFdbk1", sep=""))
+mean_var_year_fut_esmFdbk1[which(is.na(mean_var_year_fut_esmFdbk1)==T)] <- 0
+mean_var_year_fut_esmFdbk1_2x2 <- bicubic.grid(lon, lat, mean_var_year_fut_esmFdbk1, xlim=c(0,360), ylim=c(-90,90), dx=2, dy=2 )$z
+assign(paste(paste("mean_",list_var[v],"_",list_models2[m],"_year_fut_esmFdbk1_2x2", sep="")), mean_var_year_fut_esmFdbk1_2x2)
+rm(lon); rm(lat); rm(mean_var_year_fut_esmFdbk1); rm(mean_var_year_fut_esmFdbk1_2x2)}}
+### Pr/PET
+for (m in 1:4){ #:length(list_models)){       #models
+print(list_models2[m])
+lat <- get(paste("lat_", list_models2[m], sep=""))
+lon <- get(paste("lon_", list_models2[m], sep=""))
+mean_pr_year_fut_esmFdbk1 <- get( paste("mean_pr_",list_models2[m],"_year_fut_esmFdbk1", sep=""))*86400
+mean_PET_year_fut_esmFdbk1 <- get( paste("mean_PETow_",list_models2[m],"_year_fut_esmFdbk1", sep=""))
+mean_PrPET_year_fut_esmFdbk1_2x2 <- bicubic.grid(lon, lat, mean_pr_year_fut_esmFdbk1/mean_PET_year_fut_esmFdbk1, xlim=c(0,360), ylim=c(-90,90), dx=2, dy=2 )$z
+assign(paste(paste("mean_PrPET_",list_models2[m],"_year_fut_esmFdbk1_2x2", sep="")), mean_PrPET_year_fut_esmFdbk1_2x2)
+rm(lon); rm(lat); rm(mean_PrPET_year_fut_esmFdbk1_2x2); rm(mean_pr_year_fut_esmFdbk1); rm(mean_PET_year_fut_esmFdbk1)}
+
+#######################################################################################
+#######################################################################################
+######################## Let's put all models in a matrix:
+
+#### PrPET
+mean_PrPET_2x2_allmodels_year_pres_1pctCO2 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){
+print(list_models[m])
+mean_PrPET_year_pres_1pctCO2_2x2 <- get(paste("mean_PrPET_",list_models2[m],"_year_pres_1pctCO2_2x2", sep=""))
+mean_PrPET_2x2_allmodels_year_pres_1pctCO2[,,m] <- mean_PrPET_year_pres_1pctCO2_2x2
+rm(mean_PrPET_year_pres_1pctCO2_2x2)}
+
+mean_PrPET_2x2_allmodels_year_fut_1pctCO2 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){
+print(list_models[m])
+mean_PrPET_year_fut_1pctCO2_2x2 <- get(paste("mean_PrPET_",list_models2[m],"_year_fut_1pctCO2_2x2", sep=""))
+mean_PrPET_2x2_allmodels_year_fut_1pctCO2[,,m] <- mean_PrPET_year_fut_1pctCO2_2x2
+rm(mean_PrPET_year_fut_1pctCO2_2x2)}
+
+mean_PrPET_2x2_allmodels_year_pres_esmFdbk1 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){
+print(list_models[m])
+mean_PrPET_year_pres_esmFdbk1_2x2 <- get(paste("mean_PrPET_",list_models2[m],"_year_pres_esmFdbk1_2x2", sep=""))
+mean_PrPET_2x2_allmodels_year_pres_esmFdbk1[,,m] <- mean_PrPET_year_pres_esmFdbk1_2x2
+rm(mean_PrPET_year_pres_esmFdbk1_2x2)}
+
+mean_PrPET_2x2_allmodels_year_fut_esmFdbk1 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){
+print(list_models[m])
+mean_PrPET_year_fut_esmFdbk1_2x2 <- get(paste("mean_PrPET_",list_models2[m],"_year_fut_esmFdbk1_2x2", sep=""))
+mean_PrPET_2x2_allmodels_year_fut_esmFdbk1[,,m] <- mean_PrPET_year_fut_esmFdbk1_2x2
+rm(mean_PrPET_year_fut_esmFdbk1_2x2)}
+
+mean_PrPET_2x2_allmodels_year_pres_esmFixclim1 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){
+print(list_models[m])
+mean_PrPET_year_pres_esmFixclim1_2x2 <- get(paste("mean_PrPET_",list_models2[m],"_year_pres_esmFixclim1_2x2", sep=""))
+mean_PrPET_2x2_allmodels_year_pres_esmFixclim1[,,m] <- mean_PrPET_year_pres_esmFixclim1_2x2
+rm(mean_PrPET_year_pres_esmFixclim1_2x2)}
+
+mean_PrPET_2x2_allmodels_year_fut_esmFixclim1 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){
+print(list_models[m])
+mean_PrPET_year_fut_esmFixclim1_2x2 <- get(paste("mean_PrPET_",list_models2[m],"_year_fut_esmFixclim1_2x2", sep=""))
+mean_PrPET_2x2_allmodels_year_fut_esmFixclim1[,,m] <- mean_PrPET_year_fut_esmFixclim1_2x2
+rm(mean_PrPET_year_fut_esmFixclim1_2x2)}
+
+#### lai
+mean_lai_2x2_allmodels_year_pres_1pctCO2 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){
+print(list_models[m])
+mean_lai_year_pres_1pctCO2_2x2 <- get(paste("mean_lai_",list_models2[m],"_year_pres_1pctCO2_2x2", sep=""))
+mean_lai_2x2_allmodels_year_pres_1pctCO2[,,m] <- mean_lai_year_pres_1pctCO2_2x2
+rm(mean_lai_year_pres_1pctCO2_2x2)}
+mean_lai_2x2_allmodels_year_fut_1pctCO2 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){
+print(list_models[m])
+mean_lai_year_fut_1pctCO2_2x2 <- get(paste("mean_lai_",list_models2[m],"_year_fut_1pctCO2_2x2", sep=""))
+mean_lai_2x2_allmodels_year_fut_1pctCO2[,,m] <- mean_lai_year_fut_1pctCO2_2x2
+rm(mean_lai_year_fut_1pctCO2_2x2)}
+mean_lai_2x2_allmodels_year_pres_esmFdbk1 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){
+print(list_models[m])
+mean_lai_year_pres_esmFdbk1_2x2 <- get(paste("mean_lai_",list_models2[m],"_year_pres_esmFdbk1_2x2", sep=""))
+mean_lai_2x2_allmodels_year_pres_esmFdbk1[,,m] <- mean_lai_year_pres_esmFdbk1_2x2
+rm(mean_lai_year_pres_esmFdbk1_2x2)}
+mean_lai_2x2_allmodels_year_fut_esmFdbk1 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){
+print(list_models[m])
+mean_lai_year_fut_esmFdbk1_2x2 <- get(paste("mean_lai_",list_models2[m],"_year_fut_esmFdbk1_2x2", sep=""))
+mean_lai_2x2_allmodels_year_fut_esmFdbk1[,,m] <- mean_lai_year_fut_esmFdbk1_2x2
+rm(mean_lai_year_fut_esmFdbk1_2x2)}
+mean_lai_2x2_allmodels_year_pres_esmFixclim1 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){
+print(list_models[m])
+mean_lai_year_pres_esmFixclim1_2x2 <- get(paste("mean_lai_",list_models2[m],"_year_pres_esmFixclim1_2x2", sep=""))
+mean_lai_2x2_allmodels_year_pres_esmFixclim1[,,m] <- mean_lai_year_pres_esmFixclim1_2x2
+rm(mean_lai_year_pres_esmFixclim1_2x2)}
+mean_lai_2x2_allmodels_year_fut_esmFixclim1 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){
+print(list_models[m])
+mean_lai_year_fut_esmFixclim1_2x2 <- get(paste("mean_lai_",list_models2[m],"_year_fut_esmFixclim1_2x2", sep=""))
+mean_lai_2x2_allmodels_year_fut_esmFixclim1[,,m] <- mean_lai_year_fut_esmFixclim1_2x2
+rm(mean_lai_year_fut_esmFixclim1_2x2)}
+
+#### tas
+mean_tas_2x2_allmodels_year_pres_1pctCO2 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){
+print(list_models[m])
+mean_tas_year_pres_1pctCO2_2x2 <- get(paste("mean_tas_",list_models2[m],"_year_pres_1pctCO2_2x2", sep=""))
+mean_tas_2x2_allmodels_year_pres_1pctCO2[,,m] <- mean_tas_year_pres_1pctCO2_2x2
+rm(mean_tas_year_pres_1pctCO2_2x2)}
+mean_tas_2x2_allmodels_year_fut_1pctCO2 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){
+print(list_models[m])
+mean_tas_year_fut_1pctCO2_2x2 <- get(paste("mean_tas_",list_models2[m],"_year_fut_1pctCO2_2x2", sep=""))
+mean_tas_2x2_allmodels_year_fut_1pctCO2[,,m] <- mean_tas_year_fut_1pctCO2_2x2
+rm(mean_tas_year_fut_1pctCO2_2x2)}
+mean_tas_2x2_allmodels_year_pres_esmFdbk1 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){
+print(list_models[m])
+mean_tas_year_pres_esmFdbk1_2x2 <- get(paste("mean_tas_",list_models2[m],"_year_pres_esmFdbk1_2x2", sep=""))
+mean_tas_2x2_allmodels_year_pres_esmFdbk1[,,m] <- mean_tas_year_pres_esmFdbk1_2x2
+rm(mean_tas_year_pres_esmFdbk1_2x2)}
+mean_tas_2x2_allmodels_year_fut_esmFdbk1 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){
+print(list_models[m])
+mean_tas_year_fut_esmFdbk1_2x2 <- get(paste("mean_tas_",list_models2[m],"_year_fut_esmFdbk1_2x2", sep=""))
+mean_tas_2x2_allmodels_year_fut_esmFdbk1[,,m] <- mean_tas_year_fut_esmFdbk1_2x2
+rm(mean_tas_year_fut_esmFdbk1_2x2)}
+mean_tas_2x2_allmodels_year_pres_esmFixclim1 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){
+print(list_models[m])
+mean_tas_year_pres_esmFixclim1_2x2 <- get(paste("mean_tas_",list_models2[m],"_year_pres_esmFixclim1_2x2", sep=""))
+mean_tas_2x2_allmodels_year_pres_esmFixclim1[,,m] <- mean_tas_year_pres_esmFixclim1_2x2
+rm(mean_tas_year_pres_esmFixclim1_2x2)}
+mean_tas_2x2_allmodels_year_fut_esmFixclim1 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){
+print(list_models[m])
+mean_tas_year_fut_esmFixclim1_2x2 <- get(paste("mean_tas_",list_models2[m],"_year_fut_esmFixclim1_2x2", sep=""))
+mean_tas_2x2_allmodels_year_fut_esmFixclim1[,,m] <- mean_tas_year_fut_esmFixclim1_2x2
+rm(mean_tas_year_fut_esmFixclim1_2x2)}
+
+##### Pr and PET separately
+#### pr
+mean_pr_2x2_allmodels_year_pres_1pctCO2 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){ print(list_models[m])
+mean_pr_year_pres_1pctCO2_2x2 <- get(paste("mean_pr_",list_models2[m],"_year_pres_1pctCO2_2x2", sep=""))
+mean_pr_2x2_allmodels_year_pres_1pctCO2[,,m] <- mean_pr_year_pres_1pctCO2_2x2
+rm(mean_pr_year_pres_1pctCO2_2x2)}
+
+mean_pr_2x2_allmodels_year_fut_1pctCO2 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){ print(list_models[m])
+mean_pr_year_fut_1pctCO2_2x2 <- get(paste("mean_pr_",list_models2[m],"_year_fut_1pctCO2_2x2", sep=""))
+mean_pr_2x2_allmodels_year_fut_1pctCO2[,,m] <- mean_pr_year_fut_1pctCO2_2x2
+rm(mean_pr_year_fut_1pctCO2_2x2)}
+
+mean_pr_2x2_allmodels_year_pres_esmFdbk1 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){ print(list_models[m])
+mean_pr_year_pres_esmFdbk1_2x2 <- get(paste("mean_pr_",list_models2[m],"_year_pres_esmFdbk1_2x2", sep=""))
+mean_pr_2x2_allmodels_year_pres_esmFdbk1[,,m] <- mean_pr_year_pres_esmFdbk1_2x2
+rm(mean_pr_year_pres_esmFdbk1_2x2)}
+
+mean_pr_2x2_allmodels_year_fut_esmFdbk1 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){ print(list_models[m])
+mean_pr_year_fut_esmFdbk1_2x2 <- get(paste("mean_pr_",list_models2[m],"_year_fut_esmFdbk1_2x2", sep=""))
+mean_pr_2x2_allmodels_year_fut_esmFdbk1[,,m] <- mean_pr_year_fut_esmFdbk1_2x2
+rm(mean_pr_year_fut_esmFdbk1_2x2)}
+
+mean_pr_2x2_allmodels_year_pres_esmFixclim1 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){ print(list_models[m])
+mean_pr_year_pres_esmFixclim1_2x2 <- get(paste("mean_pr_",list_models2[m],"_year_pres_esmFixclim1_2x2", sep=""))
+mean_pr_2x2_allmodels_year_pres_esmFixclim1[,,m] <- mean_pr_year_pres_esmFixclim1_2x2
+rm(mean_pr_year_pres_esmFixclim1_2x2)}
+
+mean_pr_2x2_allmodels_year_fut_esmFixclim1 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){ print(list_models[m])
+mean_pr_year_fut_esmFixclim1_2x2 <- get(paste("mean_pr_",list_models2[m],"_year_fut_esmFixclim1_2x2", sep=""))
+mean_pr_2x2_allmodels_year_fut_esmFixclim1[,,m] <- mean_pr_year_fut_esmFixclim1_2x2
+rm(mean_pr_year_fut_esmFixclim1_2x2)}
+
+#### PETow
+mean_PETow_2x2_allmodels_year_pres_1pctCO2 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){ print(list_models[m])
+mean_PETow_year_pres_1pctCO2_2x2 <- get(paste("mean_PETow_",list_models2[m],"_year_pres_1pctCO2_2x2", sep=""))
+mean_PETow_2x2_allmodels_year_pres_1pctCO2[,,m] <- mean_PETow_year_pres_1pctCO2_2x2
+rm(mean_PETow_year_pres_1pctCO2_2x2)}
+
+mean_PETow_2x2_allmodels_year_fut_1pctCO2 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){ print(list_models[m])
+mean_PETow_year_fut_1pctCO2_2x2 <- get(paste("mean_PETow_",list_models2[m],"_year_fut_1pctCO2_2x2", sep=""))
+mean_PETow_2x2_allmodels_year_fut_1pctCO2[,,m] <- mean_PETow_year_fut_1pctCO2_2x2
+rm(mean_PETow_year_fut_1pctCO2_2x2)}
+
+mean_PETow_2x2_allmodels_year_pres_esmFdbk1 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){ print(list_models[m])
+mean_PETow_year_pres_esmFdbk1_2x2 <- get(paste("mean_PETow_",list_models2[m],"_year_pres_esmFdbk1_2x2", sep=""))
+mean_PETow_2x2_allmodels_year_pres_esmFdbk1[,,m] <- mean_PETow_year_pres_esmFdbk1_2x2
+rm(mean_PETow_year_pres_esmFdbk1_2x2)}
+
+mean_PETow_2x2_allmodels_year_fut_esmFdbk1 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){ print(list_models[m])
+mean_PETow_year_fut_esmFdbk1_2x2 <- get(paste("mean_PETow_",list_models2[m],"_year_fut_esmFdbk1_2x2", sep=""))
+mean_PETow_2x2_allmodels_year_fut_esmFdbk1[,,m] <- mean_PETow_year_fut_esmFdbk1_2x2
+rm(mean_PETow_year_fut_esmFdbk1_2x2)}
+
+mean_PETow_2x2_allmodels_year_pres_esmFixclim1 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){ print(list_models[m])
+mean_PETow_year_pres_esmFixclim1_2x2 <- get(paste("mean_PETow_",list_models2[m],"_year_pres_esmFixclim1_2x2", sep=""))
+mean_PETow_2x2_allmodels_year_pres_esmFixclim1[,,m] <- mean_PETow_year_pres_esmFixclim1_2x2
+rm(mean_PETow_year_pres_esmFixclim1_2x2)}
+
+mean_PETow_2x2_allmodels_year_fut_esmFixclim1 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){ print(list_models[m])
+mean_PETow_year_fut_esmFixclim1_2x2 <- get(paste("mean_PETow_",list_models2[m],"_year_fut_esmFixclim1_2x2", sep=""))
+mean_PETow_2x2_allmodels_year_fut_esmFixclim1[,,m] <- mean_PETow_year_fut_esmFixclim1_2x2
+rm(mean_PETow_year_fut_esmFixclim1_2x2)}
+
+#### hfss
+mean_hfss_2x2_allmodels_year_pres_1pctCO2 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){ print(list_models[m])
+mean_hfss_year_pres_1pctCO2_2x2 <- get(paste("mean_hfss_",list_models2[m],"_year_pres_1pctCO2_2x2", sep=""))
+mean_hfss_2x2_allmodels_year_pres_1pctCO2[,,m] <- mean_hfss_year_pres_1pctCO2_2x2
+rm(mean_hfss_year_pres_1pctCO2_2x2)}
+
+mean_hfss_2x2_allmodels_year_fut_1pctCO2 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){ print(list_models[m])
+mean_hfss_year_fut_1pctCO2_2x2 <- get(paste("mean_hfss_",list_models2[m],"_year_fut_1pctCO2_2x2", sep=""))
+mean_hfss_2x2_allmodels_year_fut_1pctCO2[,,m] <- mean_hfss_year_fut_1pctCO2_2x2
+rm(mean_hfss_year_fut_1pctCO2_2x2)}
+
+mean_hfss_2x2_allmodels_year_pres_esmFdbk1 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){ print(list_models[m])
+mean_hfss_year_pres_esmFdbk1_2x2 <- get(paste("mean_hfss_",list_models2[m],"_year_pres_esmFdbk1_2x2", sep=""))
+mean_hfss_2x2_allmodels_year_pres_esmFdbk1[,,m] <- mean_hfss_year_pres_esmFdbk1_2x2
+rm(mean_hfss_year_pres_esmFdbk1_2x2)}
+
+mean_hfss_2x2_allmodels_year_fut_esmFdbk1 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){ print(list_models[m])
+mean_hfss_year_fut_esmFdbk1_2x2 <- get(paste("mean_hfss_",list_models2[m],"_year_fut_esmFdbk1_2x2", sep=""))
+mean_hfss_2x2_allmodels_year_fut_esmFdbk1[,,m] <- mean_hfss_year_fut_esmFdbk1_2x2
+rm(mean_hfss_year_fut_esmFdbk1_2x2)}
+
+mean_hfss_2x2_allmodels_year_pres_esmFixclim1 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){ print(list_models[m])
+mean_hfss_year_pres_esmFixclim1_2x2 <- get(paste("mean_hfss_",list_models2[m],"_year_pres_esmFixclim1_2x2", sep=""))
+mean_hfss_2x2_allmodels_year_pres_esmFixclim1[,,m] <- mean_hfss_year_pres_esmFixclim1_2x2
+rm(mean_hfss_year_pres_esmFixclim1_2x2)}
+
+mean_hfss_2x2_allmodels_year_fut_esmFixclim1 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){ print(list_models[m])
+mean_hfss_year_fut_esmFixclim1_2x2 <- get(paste("mean_hfss_",list_models2[m],"_year_fut_esmFixclim1_2x2", sep=""))
+mean_hfss_2x2_allmodels_year_fut_esmFixclim1[,,m] <- mean_hfss_year_fut_esmFixclim1_2x2
+rm(mean_hfss_year_fut_esmFixclim1_2x2)}
+
+
+#### hfls
+mean_hfls_2x2_allmodels_year_pres_1pctCO2 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){ print(list_models[m])
+mean_hfls_year_pres_1pctCO2_2x2 <- get(paste("mean_hfls_",list_models2[m],"_year_pres_1pctCO2_2x2", sep=""))
+mean_hfls_2x2_allmodels_year_pres_1pctCO2[,,m] <- mean_hfls_year_pres_1pctCO2_2x2
+rm(mean_hfls_year_pres_1pctCO2_2x2)}
+
+mean_hfls_2x2_allmodels_year_fut_1pctCO2 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){ print(list_models[m])
+mean_hfls_year_fut_1pctCO2_2x2 <- get(paste("mean_hfls_",list_models2[m],"_year_fut_1pctCO2_2x2", sep=""))
+mean_hfls_2x2_allmodels_year_fut_1pctCO2[,,m] <- mean_hfls_year_fut_1pctCO2_2x2
+rm(mean_hfls_year_fut_1pctCO2_2x2)}
+
+mean_hfls_2x2_allmodels_year_pres_esmFdbk1 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){ print(list_models[m])
+mean_hfls_year_pres_esmFdbk1_2x2 <- get(paste("mean_hfls_",list_models2[m],"_year_pres_esmFdbk1_2x2", sep=""))
+mean_hfls_2x2_allmodels_year_pres_esmFdbk1[,,m] <- mean_hfls_year_pres_esmFdbk1_2x2
+rm(mean_hfls_year_pres_esmFdbk1_2x2)}
+
+mean_hfls_2x2_allmodels_year_fut_esmFdbk1 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){ print(list_models[m])
+mean_hfls_year_fut_esmFdbk1_2x2 <- get(paste("mean_hfls_",list_models2[m],"_year_fut_esmFdbk1_2x2", sep=""))
+mean_hfls_2x2_allmodels_year_fut_esmFdbk1[,,m] <- mean_hfls_year_fut_esmFdbk1_2x2
+rm(mean_hfls_year_fut_esmFdbk1_2x2)}
+
+mean_hfls_2x2_allmodels_year_pres_esmFixclim1 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){ print(list_models[m])
+mean_hfls_year_pres_esmFixclim1_2x2 <- get(paste("mean_hfls_",list_models2[m],"_year_pres_esmFixclim1_2x2", sep=""))
+mean_hfls_2x2_allmodels_year_pres_esmFixclim1[,,m] <- mean_hfls_year_pres_esmFixclim1_2x2
+rm(mean_hfls_year_pres_esmFixclim1_2x2)}
+
+mean_hfls_2x2_allmodels_year_fut_esmFixclim1 <- array(NA, dim=c(181,91,length(list_models)))
+for (m in 1:length(list_models)){ print(list_models[m])
+mean_hfls_year_fut_esmFixclim1_2x2 <- get(paste("mean_hfls_",list_models2[m],"_year_fut_esmFixclim1_2x2", sep=""))
+mean_hfls_2x2_allmodels_year_fut_esmFixclim1[,,m] <- mean_hfls_year_fut_esmFixclim1_2x2
+rm(mean_hfls_year_fut_esmFixclim1_2x2)}
+
+
+

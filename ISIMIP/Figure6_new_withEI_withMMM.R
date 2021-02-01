@@ -1,0 +1,79 @@
+################################
+#.libPaths("/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+library(ncdf, lib="/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+library(colorRamps, lib="/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+library(maps)#, lib="/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+library(ncdf4)#, lib="/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+library(fields)#, lib="/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+library(akima)#, lib="/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+#library(LSD)#, lib="/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+library(RColorBrewer, lib.loc="/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+
+area_tot <- sum(cell_area*mask, na.rm=T)
+MMM_frac_drylands_pres <- sum(   (cell_area*mask)[which(MMM_EI_pres < 0)],na.rm=T)/area_tot * 100
+print(MMM_frac_drylands_pres)
+MMM_frac_drylands_fut_co2 <- sum(   (cell_area*mask)[which(MMM_EI_fut_co2 < 0)],na.rm=T)/area_tot * 100
+print(MMM_frac_drylands_fut_co2)
+MMM_frac_drylands_fut_noco2 <- sum(   (cell_area*mask)[which(MMM_EI_fut_noco2 < 0)],na.rm=T)/area_tot * 100
+print(MMM_frac_drylands_fut_noco2)
+
+############################################################################
+############################################################################
+########## MMM, all forcing all DGVMS average?
+pdf("../ComplRel_LAIvsAI/FINAL_FIGURES_AIvsEcohydro/Figure6_new_withEI_MMM_corr.pdf", width=7, height=10); par(mar=c(2,3,3,4))
+layout(matrix(1:3,3,1, byrow=T))
+lon <- lon_lpj_guess
+lat <- lat_lpj_guess
+####### WITH CO2
+EI_pres <- MMM_EI_pres
+EI_fut_co2 <- MMM_EI_fut_co2
+diff  <- EI_fut_co2 - EI_pres; diff[which(diff >3)] <- 3; diff[which(diff < -3)] <- -3;
+image.plot(lon, lat[lowlat:highlat], diff[,lowlat:highlat], breaks=seq(-3, 3, by=0.3),
+col=col_custom(20)[20:1], main=expression(paste(Delta,"EI, CO2=RCP6.0", sep="")), cex.main=1.9, xlab="", ylab="", xaxt="n", yaxt="n",
+axis.args=list(cex.axis=1.5));  
+map(add=T, interior=F)
+increase_drylands <- array(0, dim=dim(diff))
+increase_drylands[which( (  EI_pres > 0) & (EI_fut_co2 < 0))] <- 1 #expansion
+increase_drylands[which( (  EI_pres < 0) & (EI_fut_co2 > 0))] <- -1 #contraction
+contour(lon,lat[lowlat:highlat], increase_drylands[, lowlat:highlat], levels=c(-0.3, 0.3), col=c("darkblue","darkred"), lwd=1.5, add=T, drawlabels=F);
+legend(-50,-33,lwd=1.5, col=c("darkblue","darkred"), c("Drylands contraction", "Drylands expansion"), bty="n", cex=1.6)
+points(coord_sign_EI_year_change_co2_2x2, pch=4, col="black", cex=0.001)
+mtext("a", side=3, adj=0, line=1, cex=1.5, font=2)
+###### WITHOUT CO2
+EI_pres <- MMM_EI_pres
+EI_fut_noco2 <-  MMM_EI_fut_noco2
+diff  <- EI_fut_noco2 - EI_pres; diff[which(diff >3)] <- 3; diff[which(diff < -3)] <- -3;
+image.plot(lon, lat[lowlat:highlat], diff[,lowlat:highlat], breaks=seq(-3, 3, by=0.3),
+col=col_custom(20)[20:1], main=expression(paste(Delta,"EI, CO2=2005", sep="")), cex.main=1.9, xlab="", ylab="", xaxt="n", yaxt="n",
+axis.args=list(cex.axis=1.5));  
+map(add=T, interior=F)
+increase_drylands <- array(0, dim=dim(diff))
+increase_drylands[which( (  EI_pres > 0) & (EI_fut_noco2 < 0))] <- 1  #expansion
+increase_drylands[which( (  EI_pres < 0) & (EI_fut_noco2 > 0))] <- -1 #contraction
+contour(lon,lat[lowlat:highlat], increase_drylands[, lowlat:highlat], levels=c(-0.3, 0.3), col=c("darkblue","darkred"), lwd=1.5, add=T, drawlabels=F);
+legend(-50,-33,lwd=1.5, col=c("darkblue","darkred"), c("Drylands contraction", "Drylands expansion"), bty="n", cex=1.6)
+points(coord_sign_EI_year_change_noco2_2x2, pch=4, col="black", cex=0.001)
+mtext("b", side=3, adj=0, line=1, cex=1.5, font=2)
+############# Boxplots
+par(mar=c(5,6,3,4))
+position_xaxis <- c(0,1,3)
+####  Ecohydro-based, with CO2 fertilization
+boxplot(as.vector(frac_drylands_hist), col="orange", range=0, at=position_xaxis[2]-0.3, xlim=c(0,4),
+ylab="Land fraction (%)", ylim=c(0, 70), cex.lab=1.8, cex.axis=1.7, xaxt="n",   xlab="")
+boxplot(as.vector(frac_drylands_rcp60_co2), col="red", at=position_xaxis[2]+0.3, add=TRUE, yaxt="n", xaxt="n", range=0);
+#### Ecohydro-based, without CO2 fertilization
+boxplot(as.vector(frac_drylands_hist), col="orange", at=position_xaxis[3]-0.3, add=TRUE,  yaxt="n", xaxt="n",range=0)
+boxplot(as.vector(frac_drylands_rcp60_noco2), col="red", at=position_xaxis[3]+0.3, add=TRUE,yaxt="n", xaxt="n", range=0);
+#### All the rest:
+points(cbind(c(position_xaxis[2]-0.3, position_xaxis[2]+0.3,  position_xaxis[3]-0.3,position_xaxis[3]+0.3), 
+c(mean(frac_drylands_hist), mean(frac_drylands_rcp60_co2), mean(frac_drylands_hist), mean(frac_drylands_rcp60_noco2))), pch=21,lwd=2, col="black")
+points(cbind(c(position_xaxis[2]-0.3, position_xaxis[2]+0.3,  position_xaxis[3]-0.3,position_xaxis[3]+0.3),
+c(MMM_frac_drylands_pres, MMM_frac_drylands_fut_co2, MMM_frac_drylands_pres, MMM_frac_drylands_fut_noco2)), pch=8,lwd=2, col="black")
+axis(1, labels=c("CO2=RCP60", "CO2=2005"), at=position_xaxis[2:3], tick=T, cex.axis=1.9)
+legend("bottomleft", fill=c("orange", "red"),  c("Present", "Future"), bty="n", cex=1.9)
+#legend("bottomleft", pch=c(1:4),  toupper(forcing), bty="n", cex=1.6)
+mtext("c", side=3, adj=0, line=1, cex=1.5, font=2)
+dev.off()
+
+
+

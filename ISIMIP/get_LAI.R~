@@ -1,0 +1,702 @@
+################################
+#.libPaths("/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+library(ncdf, lib="/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+library(colorRamps, lib="/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+library(maps)#, lib="/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+library(ncdf4)#, lib="/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+library(fields)#, lib="/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+library(akima)#, lib="/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+#library(LSD)#, lib="/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+library(RColorBrewer, lib.loc="/n/holystore01/LABS/mccoll_lab/Lab/aberg///R/x86_64-redhat-linux-gnu-library/3.2")
+
+### We are only going to take 2 simulations: 2005soc and 2005soc_2005CO2
+## That way we will compare with and without CO2 (for fixed 2005soc).
+## To study the effect of land-use change, we'll have to look at 2005soc vs rcp60 for a subset of models...
+## That gives us four models: ORCHIDEE, CARAIB, LPJ-GUESS, VISIT
+## For HIST we take simulation with full HIST scenario for society and CO2. Same 4 models...
+ 
+################################################################
+#### LAI from lpj_guess:
+forcing <- c("gfdl-esm2m", "ipsl-cm5a-lr", "hadgem2-es", "miroc5"); forcing2 <- c("gfdl_esm2m", "ipsl_cm5a_lr", "hadgem2_es", "miroc5")
+########### LPJ_GUESS
+###  HIST
+for (m in 1:4){ print(forcing[m])
+data <- nc_open(paste("/n/mccoll_lab/aberg/DATA/ISIMIP/HIST/lpj-guess_",forcing[m],"_ewembi_historical_histsoc_co2_lai_global_monthly_1861_2005.nc", sep=""))
+lat_lpj_guess <- ncvar_get(data, "lat")[360:1]
+lon_lpj_guess <- ncvar_get(data, "lon")
+lai_lpj_guess_historical_histsoc_co2 <- ncvar_get(data, "lai")[,360:1,]
+nc_close(data)
+number_years <- dim(lai_lpj_guess_historical_histsoc_co2)[3]/12
+bob <- array(NA, dim=c(dim(lai_lpj_guess_historical_histsoc_co2)[1:2], number_years))
+for (a in 1:number_years){print(a)
+bob[,,a] <- apply(lai_lpj_guess_historical_histsoc_co2[,,(12*(a-1)+1):(12*a)], c(1,2), mean)}
+assign(paste("lai_",forcing2[m],"_lpj_guess_historical_histsoc_co2_year",sep=""),bob)
+rm(bob); rm(lai_lpj_guess_historical_histsoc_co2) }
+### RCP60, C02=2005
+for (m in 1:4){ print(forcing[m])
+data <- nc_open(paste("/n/mccoll_lab/aberg/DATA/ISIMIP/RCP60/lpj-guess_",forcing[m],"_ewembi_rcp60_2005soc_2005co2_lai_global_monthly_2006_2099.nc", sep=""))
+lai_lpj_guess_rcp60_2005soc_2005co2 <- ncvar_get(data, "lai")[,360:1,]
+nc_close(data); 
+number_years <- dim(lai_lpj_guess_rcp60_2005soc_2005co2 )[3]/12
+bob <- array(NA, dim=c(dim(lai_lpj_guess_rcp60_2005soc_2005co2 )[1:2], number_years))
+for (a in 1:number_years){print(a)
+bob[,,a] <- apply(lai_lpj_guess_rcp60_2005soc_2005co2 [,,(12*(a-1)+1):(12*a)], c(1,2), mean)}
+assign(paste("lai_",forcing2[m],"_lpj_guess_rcp60_2005soc_2005co2_year",sep=""),bob)
+rm(bob); rm(lai_lpj_guess_rcp60_2005soc_2005co2 )}
+### RCP60, CO2=RCP60
+for (m in 1:4){ print(forcing[m])
+data <- nc_open(paste("/n/mccoll_lab/aberg/DATA/ISIMIP/RCP60/lpj-guess_",forcing[m],"_ewembi_rcp60_2005soc_co2_lai_global_monthly_2006_2099.nc", sep=""))
+lai_lpj_guess_rcp60_2005soc_co2 <- ncvar_get(data, "lai")[,360:1,]
+nc_close(data)
+number_years <- dim(lai_lpj_guess_rcp60_2005soc_co2 )[3]/12
+bob <- array(NA, dim=c(dim(lai_lpj_guess_rcp60_2005soc_co2 )[1:2], number_years))
+for (a in 1:number_years){print(a)
+bob[,,a] <- apply(lai_lpj_guess_rcp60_2005soc_co2 [,,(12*(a-1)+1):(12*a)], c(1,2), mean)}
+assign(paste("lai_",forcing2[m],"_lpj_guess_rcp60_2005soc_co2_year",sep=""),bob)
+rm(bob); rm(lai_lpj_guess_rcp60_2005soc_co2 ) }
+
+########### ORCHIDEE
+###  HIST
+for (m in 1:4){ print(forcing[m])
+data <- nc_open(paste("/n/mccoll_lab/aberg/DATA/ISIMIP/HIST/orchidee_",forcing[m],"_ewembi_historical_histsoc_co2_lai_global_monthly_1861_2005.nc", 
+sep=""))
+lat_orchidee <- ncvar_get(data, "lat")[360:1]
+lon_orchidee <- ncvar_get(data, "lon")
+lai_orchidee_historical_histsoc_co2 <- ncvar_get(data, "lai")[,360:1,]
+nc_close(data)
+number_years <- dim(lai_orchidee_historical_histsoc_co2)[3]/12
+bob <- array(NA, dim=c(dim(lai_orchidee_historical_histsoc_co2)[1:2], number_years))
+for (a in 1:number_years){print(a)
+bob[,,a] <- apply(lai_orchidee_historical_histsoc_co2[,,(12*(a-1)+1):(12*a)], c(1,2), mean)}
+assign(paste("lai_",forcing2[m],"_orchidee_historical_histsoc_co2_year",sep=""),bob)
+rm(bob); rm(lai_orchidee_historical_histsoc_co2) }
+### RCP60, C02=2005
+for (m in 1:4){ print(forcing[m])
+data <- nc_open(paste("/n/mccoll_lab/aberg/DATA/ISIMIP/RCP60/orchidee_",forcing[m],"_ewembi_rcp60_2005soc_2005co2_lai_global_monthly_2006_2099.nc", 
+sep=""))
+lai_orchidee_rcp60_2005soc_2005co2 <- ncvar_get(data, "lai")[,360:1,]
+nc_close(data);
+number_years <- dim(lai_orchidee_rcp60_2005soc_2005co2 )[3]/12
+bob <- array(NA, dim=c(dim(lai_orchidee_rcp60_2005soc_2005co2 )[1:2], number_years))
+for (a in 1:number_years){print(a)
+bob[,,a] <- apply(lai_orchidee_rcp60_2005soc_2005co2 [,,(12*(a-1)+1):(12*a)], c(1,2), mean)}
+assign(paste("lai_",forcing2[m],"_orchidee_rcp60_2005soc_2005co2_year",sep=""),bob)
+rm(bob); rm(lai_orchidee_rcp60_2005soc_2005co2 )}
+### RCP60, CO2=RCP60
+for (m in 1:4){ print(forcing[m])
+data <- nc_open(paste("/n/mccoll_lab/aberg/DATA/ISIMIP/RCP60/orchidee_",forcing[m],"_ewembi_rcp60_2005soc_co2_lai_global_monthly_2006_2099.nc", sep=""))
+lai_orchidee_rcp60_2005soc_co2 <- ncvar_get(data, "lai")[,360:1,]
+nc_close(data)
+number_years <- dim(lai_orchidee_rcp60_2005soc_co2 )[3]/12
+bob <- array(NA, dim=c(dim(lai_orchidee_rcp60_2005soc_co2 )[1:2], number_years))
+for (a in 1:number_years){print(a)
+bob[,,a] <- apply(lai_orchidee_rcp60_2005soc_co2 [,,(12*(a-1)+1):(12*a)], c(1,2), mean)}
+assign(paste("lai_",forcing2[m],"_orchidee_rcp60_2005soc_co2_year",sep=""),bob)
+rm(bob); rm(lai_orchidee_rcp60_2005soc_co2 ) }
+
+########### CARAIB
+###  HIST
+for (m in 1:4){ print(forcing[m])
+data <- nc_open(paste("/n/mccoll_lab/aberg/DATA/ISIMIP/HIST/caraib_",forcing[m],"_ewembi_historical_histsoc_co2_lai_global_monthly_1861_2005.nc", sep=""))
+lat_caraib <- ncvar_get(data, "lat")[360:1]
+lon_caraib <- ncvar_get(data, "lon")
+lai_caraib_historical_histsoc_co2 <- ncvar_get(data, "lai")[,360:1,]
+nc_close(data)
+number_years <- dim(lai_caraib_historical_histsoc_co2)[3]/12
+bob <- array(NA, dim=c(dim(lai_caraib_historical_histsoc_co2)[1:2], number_years))
+for (a in 1:number_years){print(a)
+bob[,,a] <- apply(lai_caraib_historical_histsoc_co2[,,(12*(a-1)+1):(12*a)], c(1,2), mean)}
+assign(paste("lai_",forcing2[m],"_caraib_historical_histsoc_co2_year",sep=""),bob)
+rm(bob); rm(lai_caraib_historical_histsoc_co2) }
+### RCP60, C02=2005
+for (m in 1:4){ print(forcing[m])
+data <- nc_open(paste("/n/mccoll_lab/aberg/DATA/ISIMIP/RCP60/caraib_",forcing[m],"_ewembi_rcp60_2005soc_2005co2_lai_global_monthly_2006_2099.nc", sep=""))
+lai_caraib_rcp60_2005soc_2005co2 <- ncvar_get(data, "lai")[,360:1,]
+nc_close(data);
+number_years <- dim(lai_caraib_rcp60_2005soc_2005co2 )[3]/12
+bob <- array(NA, dim=c(dim(lai_caraib_rcp60_2005soc_2005co2 )[1:2], number_years))
+for (a in 1:number_years){print(a)
+bob[,,a] <- apply(lai_caraib_rcp60_2005soc_2005co2 [,,(12*(a-1)+1):(12*a)], c(1,2), mean)}
+assign(paste("lai_",forcing2[m],"_caraib_rcp60_2005soc_2005co2_year",sep=""),bob)
+rm(bob); rm(lai_caraib_rcp60_2005soc_2005co2 )}
+### RCP60, CO2=RCP60
+for (m in 1:4){ print(forcing[m])
+data <- nc_open(paste("/n/mccoll_lab/aberg/DATA/ISIMIP/RCP60/caraib_",forcing[m],"_ewembi_rcp60_2005soc_co2_lai_global_monthly_2006_2099.nc", sep=""))
+lai_caraib_rcp60_2005soc_co2 <- ncvar_get(data, "lai")[,360:1,]
+nc_close(data)
+number_years <- dim(lai_caraib_rcp60_2005soc_co2 )[3]/12
+bob <- array(NA, dim=c(dim(lai_caraib_rcp60_2005soc_co2 )[1:2], number_years))
+for (a in 1:number_years){print(a)
+bob[,,a] <- apply(lai_caraib_rcp60_2005soc_co2 [,,(12*(a-1)+1):(12*a)], c(1,2), mean)}
+assign(paste("lai_",forcing2[m],"_caraib_rcp60_2005soc_co2_year",sep=""),bob)
+rm(bob); rm(lai_caraib_rcp60_2005soc_co2 ) }
+
+
+########### VISIT
+###  HIST
+for (m in 1:4){ print(forcing[m])
+data <- nc_open(paste("/n/mccoll_lab/aberg/DATA/ISIMIP/HIST/visit_",forcing[m],"_ewembi_historical_histsoc_co2_lai_global_monthly_1861_2005.nc", sep=""))
+lat_visit <- ncvar_get(data, "lat")[360:1]
+lon_visit <- ncvar_get(data, "lon")
+lai_visit_historical_histsoc_co2 <- ncvar_get(data, "lai")[,360:1,]
+nc_close(data)
+number_years <- dim(lai_visit_historical_histsoc_co2)[3]/12
+bob <- array(NA, dim=c(dim(lai_visit_historical_histsoc_co2)[1:2], number_years))
+for (a in 1:number_years){print(a)
+bob[,,a] <- apply(lai_visit_historical_histsoc_co2[,,(12*(a-1)+1):(12*a)], c(1,2), mean)}
+assign(paste("lai_",forcing2[m],"_visit_historical_histsoc_co2_year",sep=""),bob)
+rm(bob); rm(lai_visit_historical_histsoc_co2) }
+### RCP60, C02=2005
+for (m in 1:4){ print(forcing[m])
+data <- nc_open(paste("/n/mccoll_lab/aberg/DATA/ISIMIP/RCP60/visit_",forcing[m],"_ewembi_rcp60_2005soc_2005co2_lai_global_monthly_2006_2099.nc", sep=""))
+lai_visit_rcp60_2005soc_2005co2 <- ncvar_get(data, "lai")[,360:1,]
+nc_close(data);
+number_years <- dim(lai_visit_rcp60_2005soc_2005co2 )[3]/12
+bob <- array(NA, dim=c(dim(lai_visit_rcp60_2005soc_2005co2 )[1:2], number_years))
+for (a in 1:number_years){print(a)
+bob[,,a] <- apply(lai_visit_rcp60_2005soc_2005co2 [,,(12*(a-1)+1):(12*a)], c(1,2), mean)}
+assign(paste("lai_",forcing2[m],"_visit_rcp60_2005soc_2005co2_year",sep=""),bob)
+rm(bob); rm(lai_visit_rcp60_2005soc_2005co2 )}
+### RCP60, CO2=RCP60
+for (m in 1:4){ print(forcing[m])
+data <- nc_open(paste("/n/mccoll_lab/aberg/DATA/ISIMIP/RCP60/visit_",forcing[m],"_ewembi_rcp60_2005soc_co2_lai_global_monthly_2006_2099.nc", sep=""))
+lai_visit_rcp60_2005soc_co2 <- ncvar_get(data, "lai")[,360:1,]
+nc_close(data)
+number_years <- dim(lai_visit_rcp60_2005soc_co2 )[3]/12
+bob <- array(NA, dim=c(dim(lai_visit_rcp60_2005soc_co2 )[1:2], number_years))
+for (a in 1:number_years){print(a)
+bob[,,a] <- apply(lai_visit_rcp60_2005soc_co2 [,,(12*(a-1)+1):(12*a)], c(1,2), mean)}
+assign(paste("lai_",forcing2[m],"_visit_rcp60_2005soc_co2_year",sep=""),bob)
+rm(bob); rm(lai_visit_rcp60_2005soc_co2 ) }
+
+
+
+
+
+########### Here come the plots ###
+lowlat_lpj_guess <- min(which(lat_lpj_guess > -60))
+highlat_lpj_guess <- min(which(lat_lpj_guess > 80))
+col_custom =  colorRampPalette(c("darkblue","blue","cyan","white","orange","red","darkred"))
+col_custom2 = colorRampPalette(c("white","yellow","orange", "red","darkred","black"))
+png("LAI_lpj_guess_rcp60.png", width=900, height=1200)
+layout(matrix(1:8,4,2, byrow=F))
+for (m in 1:4){
+lai_fut_2005co2 <-  get(paste("lai_",forcing2[m],"_lpj_guess_rcp60_2005soc_2005co2_year",sep=""))
+lai_fut_co2 <- get(paste("lai_",forcing2[m],"_lpj_guess_rcp60_2005soc_co2_year",sep=""))
+lai_pres <- get(paste("lai_",forcing2[m],"_lpj_guess_historical_histsoc_co2_year",sep=""))
+diff  <- apply(lai_fut_2005co2[,,65:94], c(1,2), mean, na.rm=T) -  apply(lai_pres[,,111:140], c(1,2), mean, na.rm=T) 
+image.plot(lon_lpj_guess, lat_lpj_guess[lowlat_lpj_guess:highlat_lpj_guess], diff[,lowlat_lpj_guess:highlat_lpj_guess], breaks=seq(-2, 2, by=0.1), col=col_custom(40)[40:1], 
+main=paste("lpj_guess, LAI, RCP6.0, 2070-2099 minus 1971-2000 \n soc=2005 CO2=2005, ",forcing[m],sep=""), cex.main=1.5); map(add=T, interior=F)
+###
+diff  <- apply(lai_fut_co2[,,65:94], c(1,2), mean, na.rm=T) -  apply(lai_pres[,,111:140], c(1,2), mean, na.rm=T) 
+image.plot(lon_lpj_guess, lat_lpj_guess[lowlat_lpj_guess:highlat_lpj_guess], diff[,lowlat_lpj_guess:highlat_lpj_guess], breaks=seq(-2, 2, by=0.1), col=col_custom(40)[40:1],
+main=paste("lpj_guess, LAI RCP6.0, 2070-2099 minus 1971-2000 \n soc=2005 CO2=RCP60, ", forcing[m],sep=""), cex.main=1.5); map(add=T, interior=F) }
+dev.off()
+
+#######################################################################
+#######################################################################
+#######################################################################
+#######################################################################
+#######################################################################
+#######################################################################
+#######################################################################
+#######################################################################
+#######################################################################
+########################
+### Multi model means (forcings...)
+#forcing <- c("gfdl-esm2m", "ipsl-cm5a-lr", "hadgem2-es", "miroc5")
+### just edit the lines below with the four different veg. models:
+## LPJ_GUESS
+lai_MMM_lpj_guess_historical_histsoc_co2_year <- array(NA, dim=dim(lai_miroc5_lpj_guess_historical_histsoc_co2_year))
+for (i in 1:length(lon_lpj_guess)) {print(i)
+for (j in 1:length(lat_lpj_guess)) {
+bob <- rbind(lai_gfdl_esm2m_lpj_guess_historical_histsoc_co2_year[i,j,],lai_ipsl_cm5a_lr_lpj_guess_historical_histsoc_co2_year[i,j,],
+lai_hadgem2_es_lpj_guess_historical_histsoc_co2_year[i,j,],lai_miroc5_lpj_guess_historical_histsoc_co2_year[i,j,])
+lai_MMM_lpj_guess_historical_histsoc_co2_year[i,j,] <- colMeans(bob, na.rm=T) ; rm(bob) }}
+
+lai_MMM_lpj_guess_rcp60_2005soc_co2_year <- array(NA, dim=dim(lai_miroc5_lpj_guess_rcp60_2005soc_co2_year))
+for (i in 1:length(lon_lpj_guess)) {print(i)
+for (j in 1:length(lat_lpj_guess)) {
+bob <- rbind(lai_gfdl_esm2m_lpj_guess_rcp60_2005soc_co2_year[i,j,],lai_ipsl_cm5a_lr_lpj_guess_rcp60_2005soc_co2_year[i,j,],
+lai_hadgem2_es_lpj_guess_rcp60_2005soc_co2_year[i,j,],lai_miroc5_lpj_guess_rcp60_2005soc_co2_year[i,j,])
+lai_MMM_lpj_guess_rcp60_2005soc_co2_year[i,j,] <- colMeans(bob, na.rm=T)  ; rm(bob)}}
+
+lai_MMM_lpj_guess_rcp60_2005soc_2005co2_year <- array(NA, dim=dim(lai_miroc5_lpj_guess_rcp60_2005soc_2005co2_year))
+for (i in 1:length(lon_lpj_guess)) {print(i)
+for (j in 1:length(lat_lpj_guess)) {
+bob <- rbind(lai_gfdl_esm2m_lpj_guess_rcp60_2005soc_2005co2_year[i,j,],lai_ipsl_cm5a_lr_lpj_guess_rcp60_2005soc_2005co2_year[i,j,],
+lai_hadgem2_es_lpj_guess_rcp60_2005soc_2005co2_year[i,j,],lai_miroc5_lpj_guess_rcp60_2005soc_2005co2_year[i,j,])
+lai_MMM_lpj_guess_rcp60_2005soc_2005co2_year[i,j,] <- colMeans(bob, na.rm=T) ; rm(bob) }}
+
+## ORCHIDEE
+lai_MMM_orchidee_historical_histsoc_co2_year <- array(NA, dim=dim(lai_miroc5_orchidee_historical_histsoc_co2_year))
+for (i in 1:length(lon_orchidee)) {print(i)
+for (j in 1:length(lat_orchidee)) {
+bob <- rbind(lai_gfdl_esm2m_orchidee_historical_histsoc_co2_year[i,j,],lai_ipsl_cm5a_lr_orchidee_historical_histsoc_co2_year[i,j,],
+lai_hadgem2_es_orchidee_historical_histsoc_co2_year[i,j,],lai_miroc5_orchidee_historical_histsoc_co2_year[i,j,])
+lai_MMM_orchidee_historical_histsoc_co2_year[i,j,] <- colMeans(bob, na.rm=T) ; rm(bob) }}
+
+lai_MMM_orchidee_rcp60_2005soc_co2_year <- array(NA, dim=dim(lai_miroc5_orchidee_rcp60_2005soc_co2_year))
+for (i in 1:length(lon_orchidee)) {print(i)
+for (j in 1:length(lat_orchidee)) {
+bob <- rbind(lai_gfdl_esm2m_orchidee_rcp60_2005soc_co2_year[i,j,],lai_ipsl_cm5a_lr_orchidee_rcp60_2005soc_co2_year[i,j,],
+lai_hadgem2_es_orchidee_rcp60_2005soc_co2_year[i,j,],lai_miroc5_orchidee_rcp60_2005soc_co2_year[i,j,])
+lai_MMM_orchidee_rcp60_2005soc_co2_year[i,j,] <- colMeans(bob, na.rm=T)  ; rm(bob)}}
+
+lai_MMM_orchidee_rcp60_2005soc_2005co2_year <- array(NA, dim=dim(lai_miroc5_orchidee_rcp60_2005soc_2005co2_year))
+for (i in 1:length(lon_orchidee)) {print(i)
+for (j in 1:length(lat_orchidee)) {
+bob <- rbind(lai_gfdl_esm2m_orchidee_rcp60_2005soc_2005co2_year[i,j,],lai_ipsl_cm5a_lr_orchidee_rcp60_2005soc_2005co2_year[i,j,],
+lai_hadgem2_es_orchidee_rcp60_2005soc_2005co2_year[i,j,],lai_miroc5_orchidee_rcp60_2005soc_2005co2_year[i,j,])
+lai_MMM_orchidee_rcp60_2005soc_2005co2_year[i,j,] <- colMeans(bob, na.rm=T) ; rm(bob) }}
+
+## VISIT
+lai_MMM_visit_historical_histsoc_co2_year <- array(NA, dim=dim(lai_miroc5_visit_historical_histsoc_co2_year))
+for (i in 1:length(lon_visit)) {print(i)
+for (j in 1:length(lat_visit)) {
+bob <- rbind(lai_gfdl_esm2m_visit_historical_histsoc_co2_year[i,j,],lai_ipsl_cm5a_lr_visit_historical_histsoc_co2_year[i,j,],
+lai_hadgem2_es_visit_historical_histsoc_co2_year[i,j,],lai_miroc5_visit_historical_histsoc_co2_year[i,j,])
+lai_MMM_visit_historical_histsoc_co2_year[i,j,] <- colMeans(bob, na.rm=T) ; rm(bob) }}
+  
+lai_MMM_visit_rcp60_2005soc_co2_year <- array(NA, dim=dim(lai_miroc5_visit_rcp60_2005soc_co2_year))
+for (i in 1:length(lon_visit)) {print(i)
+for (j in 1:length(lat_visit)) {
+bob <- rbind(lai_gfdl_esm2m_visit_rcp60_2005soc_co2_year[i,j,],lai_ipsl_cm5a_lr_visit_rcp60_2005soc_co2_year[i,j,],
+lai_hadgem2_es_visit_rcp60_2005soc_co2_year[i,j,],lai_miroc5_visit_rcp60_2005soc_co2_year[i,j,])
+lai_MMM_visit_rcp60_2005soc_co2_year[i,j,] <- colMeans(bob, na.rm=T)  ; rm(bob)}}
+
+lai_MMM_visit_rcp60_2005soc_2005co2_year <- array(NA, dim=dim(lai_miroc5_visit_rcp60_2005soc_2005co2_year))
+for (i in 1:length(lon_visit)) {print(i)
+for (j in 1:length(lat_visit)) {
+bob <- rbind(lai_gfdl_esm2m_visit_rcp60_2005soc_2005co2_year[i,j,],lai_ipsl_cm5a_lr_visit_rcp60_2005soc_2005co2_year[i,j,],
+lai_hadgem2_es_visit_rcp60_2005soc_2005co2_year[i,j,],lai_miroc5_visit_rcp60_2005soc_2005co2_year[i,j,])
+lai_MMM_visit_rcp60_2005soc_2005co2_year[i,j,] <- colMeans(bob, na.rm=T) ; rm(bob) }}
+
+## CARAIB
+lai_MMM_caraib_historical_histsoc_co2_year <- array(NA, dim=dim(lai_miroc5_caraib_historical_histsoc_co2_year))
+for (i in 1:length(lon_caraib)) {print(i)
+for (j in 1:length(lat_caraib)) {
+bob <- rbind(lai_gfdl_esm2m_caraib_historical_histsoc_co2_year[i,j,],lai_ipsl_cm5a_lr_caraib_historical_histsoc_co2_year[i,j,],
+lai_hadgem2_es_caraib_historical_histsoc_co2_year[i,j,],lai_miroc5_caraib_historical_histsoc_co2_year[i,j,])
+lai_MMM_caraib_historical_histsoc_co2_year[i,j,] <- colMeans(bob, na.rm=T) ; rm(bob) }}
+  
+lai_MMM_caraib_rcp60_2005soc_co2_year <- array(NA, dim=dim(lai_miroc5_caraib_rcp60_2005soc_co2_year))
+for (i in 1:length(lon_caraib)) {print(i)
+for (j in 1:length(lat_caraib)) {
+bob <- rbind(lai_gfdl_esm2m_caraib_rcp60_2005soc_co2_year[i,j,],lai_ipsl_cm5a_lr_caraib_rcp60_2005soc_co2_year[i,j,],
+lai_hadgem2_es_caraib_rcp60_2005soc_co2_year[i,j,],lai_miroc5_caraib_rcp60_2005soc_co2_year[i,j,])
+lai_MMM_caraib_rcp60_2005soc_co2_year[i,j,] <- colMeans(bob, na.rm=T)  ; rm(bob)}}
+lai_MMM_caraib_rcp60_2005soc_2005co2_year <- array(NA, dim=dim(lai_miroc5_caraib_rcp60_2005soc_2005co2_year))
+for (i in 1:length(lon_caraib)) {print(i)
+for (j in 1:length(lat_caraib)) {
+bob <- rbind(lai_gfdl_esm2m_caraib_rcp60_2005soc_2005co2_year[i,j,],lai_ipsl_cm5a_lr_caraib_rcp60_2005soc_2005co2_year[i,j,],
+lai_hadgem2_es_caraib_rcp60_2005soc_2005co2_year[i,j,],lai_miroc5_caraib_rcp60_2005soc_2005co2_year[i,j,])
+lai_MMM_caraib_rcp60_2005soc_2005co2_year[i,j,] <- colMeans(bob, na.rm=T) ; rm(bob) }}
+
+
+
+####################################################################
+list_models <- c("caraib", "lpj_guess", "orchidee", "visit")
+png("LAI_rcp60_allmodels_averageofforcings_withCO2.png", width=1300, height=1200)
+layout(matrix(1:12,4,3, byrow=T))
+for (m in 1:4){
+lon <- get(paste("lon_",list_models[m], sep=""));lat <- get(paste("lat_",list_models[m], sep=""))
+lowlat <- min(which(lat > -60)); highlat <- min(which(lat > 80))
+lai_fut_co2 <- apply(get(paste("lai_MMM_", list_models[m], "_rcp60_2005soc_co2_year",sep=""))[,,65:94], c(1,2), mean, na.rm=T)
+lai_pres<- apply(get(paste("lai_MMM_", list_models[m],"_historical_histsoc_co2_year",sep=""))[,,111:140], c(1,2), mean, na.rm=T)
+lai_fut_co2[lai_fut_co2 > 8 ] <- 8; lai_pres[lai_pres > 8] <- 8
+####
+image.plot(lon, lat[lowlat:highlat], lai_pres[,lowlat:highlat], 
+zlim=c(0,8), col=brewer.pal(8, "YlGnBu"), breaks=seq(0,8,by=1),
+main=paste(list_models[m],", HIST, 1971-2000, MMM",sep=""), cex.main=1.5); map(add=T, interior=F)
+#contour(seq(-180,180, length.out=720), seq(lat[lowlat],lat[highlat],length.out=length(lowlat:highlat)),
+#lai_pres[ ,lowlat:highlat],levels=c(2), col="gray", lwd=1.5, add=T);
+drylands <- lai_pres; drylands[lai_pres < 1.5] <- 1 ;  drylands[lai_pres >= 1.5] <- 0 ;
+drylands[,which( (lat>55) | (lat < - 55))] <- 0; drylands <- drylands * mask 
+contour(seq(-180,180, length.out=720), seq(lat[lowlat],lat[highlat],length.out=length(lowlat:highlat)),
+drylands[ ,lowlat:highlat],levels=c(1), col="red", lwd=1.5, add=T, drawlabels=F);
+####
+image.plot(lon, lat[lowlat:highlat], lai_fut_co2[,lowlat:highlat], zlim=c(0,8), col=brewer.pal(8, "YlGnBu"), breaks=seq(0,8,by=1),
+main=paste(list_models[m], ", RCP60, 2070-2099 (CO2=RCP60), MMM", sep=""), cex.main=1.5); map(add=T, interior=F)
+#contour(seq(-180,180, length.out=720), seq(lat[lowlat],lat[highlat],length.out=length(lowlat:highlat)),
+#lai_fut_co2[ ,lowlat:highlat],levels=c(2), col="gray", lwd=1.5, add=T);
+drylands_fut <- lai_fut_co2; drylands_fut[lai_fut_co2 < 1.5] <- 1 ;  drylands_fut[lai_fut_co2 >= 1.5] <- 0 ;
+drylands_fut[,which( (lat>55) | (lat < - 55))] <- 0; drylands_fut <- drylands_fut * mask
+contour(seq(-180,180, length.out=720), seq(lat[lowlat],lat[highlat],length.out=length(lowlat:highlat)),
+drylands_fut[ ,lowlat:highlat],levels=c(1), col="red", lwd=1.5, add=T, drawlabels=F);
+####
+diff  <- lai_fut_co2 - lai_pres; diff[which(diff >2)] <- 2; diff[which(diff < -2)] <- -2;  
+image.plot(lon, lat[lowlat:highlat], diff[,lowlat:highlat], breaks=seq(-2, 2, by=0.1), 
+col=col_custom(40)[40:1], main=paste(list_models[m],", 2070-2099 minus 1971-2000, CO2=RCP60", sep=""), cex.main=1.5);  map(add=T, interior=F)
+drylands_diff <- drylands_fut - drylands; print(range(drylands_diff[,], na.rm=T))
+contour(seq(-180,180, length.out=720), seq(lat[lowlat],lat[highlat],length.out=length(lowlat:highlat)),
+drylands_diff[ ,lowlat:highlat],levels=c(-0.5, 0.5), col=c("darkblue", "red"), lwd=1, add=T, drawlabels=F); 
+rm(lai_pres); rm(lai_fut_co2)}
+dev.off()
+
+###### 
+## Alternative definition of drylands: not a fixed threshold, but a relative one, compared to distribution of LAI in each model:
+####################################################################
+list_models <- c("caraib", "lpj_guess", "orchidee", "visit")
+png("LAI_rcp60_allmodels_averageofforcings_withCO2_reldef.png", width=1300, height=1200)
+layout(matrix(1:12,4,3, byrow=T))
+for (m in 1:4){
+lon <- get(paste("lon_",list_models[m], sep=""));lat <- get(paste("lat_",list_models[m], sep=""))
+lowlat <- min(which(lat > -60)); highlat <- min(which(lat > 80))
+lai_fut_co2 <- apply(get(paste("lai_MMM_", list_models[m], "_rcp60_2005soc_co2_year",sep=""))[,,65:94], c(1,2), mean, na.rm=T)
+lai_pres<- apply(get(paste("lai_MMM_", list_models[m],"_historical_histsoc_co2_year",sep=""))[,,111:140], c(1,2), mean, na.rm=T)
+drylands_threshold <- quantile(lai_pres, probs=seq(0,1, by=0.01), na.rm=T)[46]
+drylands <- lai_pres; drylands[lai_pres < drylands_threshold] <- 1 ;  drylands[lai_pres >= drylands_threshold] <- 0 ;
+drylands[,which( (lat>55) | (lat < - 55))] <- 0; drylands <- drylands * mask
+drylands_fut <- lai_fut_co2; drylands_fut[lai_fut_co2 < drylands_threshold] <- 1 ;  drylands_fut[lai_fut_co2 >= drylands_threshold] <- 0 ;
+drylands_fut[,which( (lat>55) | (lat < - 55))] <- 0; drylands_fut <- drylands_fut * mask
+diff  <- lai_fut_co2 - lai_pres; diff[which(diff >2)] <- 2; diff[which(diff < -2)] <- -2;
+lai_fut_co2[lai_fut_co2 > 8 ] <- 8; lai_pres[lai_pres > 8] <- 8
+####
+image.plot(lon, lat[lowlat:highlat], lai_pres[,lowlat:highlat],
+zlim=c(0,8), col=brewer.pal(8, "YlGnBu"), breaks=seq(0,8,by=1),
+main=paste(list_models[m],", HIST, 1971-2000, MMM",sep=""), cex.main=1.5); map(add=T, interior=F)
+#contour(seq(-180,180, length.out=720), seq(lat[lowlat],lat[highlat],length.out=length(lowlat:highlat)),
+#lai_pres[ ,lowlat:highlat],levels=c(2), col="gray", lwd=1.5, add=T);
+contour(seq(-180,180, length.out=720), seq(lat[lowlat],lat[highlat],length.out=length(lowlat:highlat)),
+drylands[ ,lowlat:highlat],levels=c(1), col="red", lwd=1.5, add=T, drawlabels=F);
+####
+image.plot(lon, lat[lowlat:highlat], lai_fut_co2[,lowlat:highlat], zlim=c(0,8), col=brewer.pal(8, "YlGnBu"), breaks=seq(0,8,by=1),
+main=paste(list_models[m], ", RCP60, 2070-2099 (CO2=RCP60), MMM", sep=""), cex.main=1.5); map(add=T, interior=F)
+#contour(seq(-180,180, length.out=720), seq(lat[lowlat],lat[highlat],length.out=length(lowlat:highlat)),
+#lai_fut_co2[ ,lowlat:highlat],levels=c(2), col="gray", lwd=1.5, add=T);
+contour(seq(-180,180, length.out=720), seq(lat[lowlat],lat[highlat],length.out=length(lowlat:highlat)),
+drylands_fut[ ,lowlat:highlat],levels=c(1), col="red", lwd=1.5, add=T, drawlabels=F);
+####
+image.plot(lon, lat[lowlat:highlat], diff[,lowlat:highlat], breaks=seq(-2, 2, by=0.1),
+col=col_custom(40)[40:1], main=paste(list_models[m],", 2070-2099 minus 1971-2000, CO2=RCP60", sep=""), cex.main=1.5);  map(add=T, interior=F)
+drylands_diff <- drylands_fut - drylands; print(range(drylands_diff[,], na.rm=T))
+contour(seq(-180,180, length.out=720), seq(lat[lowlat],lat[highlat],length.out=length(lowlat:highlat)),
+drylands_diff[ ,lowlat:highlat],levels=c(-0.5, 0.5), col=c("darkblue", "red"), lwd=1, add=T, drawlabels=F);
+rm(lai_pres); rm(lai_fut_co2)}
+dev.off()
+
+
+for (m in 1:4){
+lon <- get(paste("lon_",list_models[m], sep=""));lat <- get(paste("lat_",list_models[m], sep=""))
+lowlat <- min(which(lat > -60)); highlat <- min(which(lat > 80))
+lai_fut_co2 <- apply(get(paste("lai_MMM_", list_models[m], "_rcp60_2005soc_co2_year",sep=""))[,,65:94], c(1,2), mean, na.rm=T)
+lai_pres<- apply(get(paste("lai_MMM_", list_models[m],"_historical_histsoc_co2_year",sep=""))[,,111:140], c(1,2), mean, na.rm=T)
+drylands_threshold <- quantile(lai_pres, probs=seq(0,1, by=0.01), na.rm=T)[46]
+assign(paste("drylands_threshold_",list_models[m],sep=""), drylands_threshold) }
+
+### Let's make a histogram of LAI values for each model:
+png("Hist_LAI_rcp60_allmodels_averageofforcings_withCO2.png", width=1300, height=1200)
+layout(matrix(1:12,4,3, byrow=T))
+for (m in 1:4){
+lon <- get(paste("lon_",list_models[m], sep=""));lat <- get(paste("lat_",list_models[m], sep=""))
+lowlat <- min(which(lat > -60)); highlat <- min(which(lat > 80))
+lai_fut_co2 <- apply(get(paste("lai_MMM_", list_models[m], "_rcp60_2005soc_co2_year",sep=""))[,,65:94], c(1,2), mean, na.rm=T)
+lai_pres<- apply(get(paste("lai_MMM_", list_models[m],"_historical_histsoc_co2_year",sep=""))[,,111:140], c(1,2), mean, na.rm=T)
+hist(lai_pres, breaks = seq (0,range(lai_pres,na.rm=T)[2]+1, by=0.05), main=paste(list_models[m], ", LAI pres", sep=""), cex.axis=2, cex.lab=2,cex.main=2)
+thres <- get(paste("drylands_threshold_",list_models[m],sep="")); abline(v=thres, col="red"); abline(v=1.5, col="darkred")
+drylands <- lai_pres; drylands[lai_pres < thres] <- 1 ;  drylands[lai_pres >= thres] <- NA ;
+drylands[,which( (lat>55) | (lat < - 55))] <- NA; drylands <- drylands * mask
+hist(lai_fut_co2, breaks = seq (0,range(lai_fut_co2,na.rm=T)[2]+1, by=0.05), main=paste(list_models[m],", LAI fut",sep=""),cex.axis=2, cex.lab=2,cex.main=2)
+abline(v=thres, col="red"); abline(v=1.5, col="darkred")
+bob<- (lai_fut_co2 - lai_pres )[which(drylands==1)]; bob[bob > 2]<- 2;bob[bob< -2] <- -2
+hist( bob, breaks=seq(-2,2,by=0.05), main=paste(list_models[m], ", LAI fut-pres, drylands", sep="")  , cex.axis=2, cex.lab=2,cex.main=2) 
+abline(v=0)}
+dev.off()
+
+
+
+##############################################
+### Save data:
+save(lai_gfdl_esm2m_lpj_guess_rcp60_2005soc_2005co2_year, file="save_RData/lai_gfdl_esm2m_lpj_guess_rcp60_2005soc_2005co2_year.RData")
+save(lai_ipsl_cm5a_lr_lpj_guess_rcp60_2005soc_2005co2_year, file="save_RData/lai_ipsl_cm5a_lr_lpj_guess_rcp60_2005soc_2005co2_year.RData")
+save(lai_hadgem2_es_lpj_guess_rcp60_2005soc_2005co2_year, file="save_RData/lai_hadgem2_es_lpj_guess_rcp60_2005soc_2005co2_year.RData")
+save(lai_miroc5_lpj_guess_rcp60_2005soc_2005co2_year, file="save_RData/lai_miroc5_lpj_guess_rcp60_2005soc_2005co2_year.RData")
+
+save(lai_gfdl_esm2m_orchidee_rcp60_2005soc_2005co2_year, file="save_RData/lai_gfdl_esm2m_orchidee_rcp60_2005soc_2005co2_year.RData")
+save(lai_ipsl_cm5a_lr_orchidee_rcp60_2005soc_2005co2_year, file="save_RData/lai_ipsl_cm5a_lr_orchidee_rcp60_2005soc_2005co2_year.RData")
+save(lai_hadgem2_es_orchidee_rcp60_2005soc_2005co2_year, file="save_RData/lai_hadgem2_es_orchidee_rcp60_2005soc_2005co2_year.RData")
+save(lai_miroc5_orchidee_rcp60_2005soc_2005co2_year, file="save_RData/lai_miroc5_orchidee_rcp60_2005soc_2005co2_year.RData")
+
+save(lai_gfdl_esm2m_caraib_rcp60_2005soc_2005co2_year, file="save_RData/lai_gfdl_esm2m_caraib_rcp60_2005soc_2005co2_year.RData")
+save(lai_ipsl_cm5a_lr_caraib_rcp60_2005soc_2005co2_year, file="save_RData/lai_ipsl_cm5a_lr_caraib_rcp60_2005soc_2005co2_year.RData")
+save(lai_hadgem2_es_caraib_rcp60_2005soc_2005co2_year, file="save_RData/lai_hadgem2_es_caraib_rcp60_2005soc_2005co2_year.RData")
+save(lai_miroc5_caraib_rcp60_2005soc_2005co2_year, file="save_RData/lai_miroc5_caraib_rcp60_2005soc_2005co2_year.RData")
+
+save(lai_gfdl_esm2m_visit_rcp60_2005soc_2005co2_year, file="save_RData/lai_gfdl_esm2m_visit_rcp60_2005soc_2005co2_year.RData")
+save(lai_ipsl_cm5a_lr_visit_rcp60_2005soc_2005co2_year, file="save_RData/lai_ipsl_cm5a_lr_visit_rcp60_2005soc_2005co2_year.RData")
+save(lai_hadgem2_es_visit_rcp60_2005soc_2005co2_year, file="save_RData/lai_hadgem2_es_visit_rcp60_2005soc_2005co2_year.RData")
+save(lai_miroc5_visit_rcp60_2005soc_2005co2_year, file="save_RData/lai_miroc5_visit_rcp60_2005soc_2005co2_year.RData")
+
+
+
+save(lai_gfdl_esm2m_lpj_guess_rcp60_2005soc_co2_year, file="save_RData/lai_gfdl_esm2m_lpj_guess_rcp60_2005soc_co2_year.RData")
+save(lai_ipsl_cm5a_lr_lpj_guess_rcp60_2005soc_co2_year, file="save_RData/lai_ipsl_cm5a_lr_lpj_guess_rcp60_2005soc_co2_year.RData")
+save(lai_hadgem2_es_lpj_guess_rcp60_2005soc_co2_year, file="save_RData/lai_hadgem2_es_lpj_guess_rcp60_2005soc_co2_year.RData")
+save(lai_miroc5_lpj_guess_rcp60_2005soc_co2_year, file="save_RData/lai_miroc5_lpj_guess_rcp60_2005soc_co2_year.RData")
+
+save(lai_gfdl_esm2m_orchidee_rcp60_2005soc_co2_year, file="save_RData/lai_gfdl_esm2m_orchidee_rcp60_2005soc_co2_year.RData")
+save(lai_ipsl_cm5a_lr_orchidee_rcp60_2005soc_co2_year, file="save_RData/lai_ipsl_cm5a_lr_orchidee_rcp60_2005soc_co2_year.RData")
+save(lai_hadgem2_es_orchidee_rcp60_2005soc_co2_year, file="save_RData/lai_hadgem2_es_orchidee_rcp60_2005soc_co2_year.RData")
+save(lai_miroc5_orchidee_rcp60_2005soc_co2_year, file="save_RData/lai_miroc5_orchidee_rcp60_2005soc_co2_year.RData")
+
+save(lai_gfdl_esm2m_caraib_rcp60_2005soc_co2_year, file="save_RData/lai_gfdl_esm2m_caraib_rcp60_2005soc_co2_year.RData")
+save(lai_ipsl_cm5a_lr_caraib_rcp60_2005soc_co2_year, file="save_RData/lai_ipsl_cm5a_lr_caraib_rcp60_2005soc_co2_year.RData")
+save(lai_hadgem2_es_caraib_rcp60_2005soc_co2_year, file="save_RData/lai_hadgem2_es_caraib_rcp60_2005soc_co2_year.RData")
+save(lai_miroc5_caraib_rcp60_2005soc_co2_year, file="save_RData/lai_miroc5_caraib_rcp60_2005soc_co2_year.RData")
+
+save(lai_gfdl_esm2m_visit_rcp60_2005soc_co2_year, file="save_RData/lai_gfdl_esm2m_visit_rcp60_2005soc_co2_year.RData")
+save(lai_ipsl_cm5a_lr_visit_rcp60_2005soc_co2_year, file="save_RData/lai_ipsl_cm5a_lr_visit_rcp60_2005soc_co2_year.RData")
+save(lai_hadgem2_es_visit_rcp60_2005soc_co2_year, file="save_RData/lai_hadgem2_es_visit_rcp60_2005soc_co2_year.RData")
+save(lai_miroc5_visit_rcp60_2005soc_co2_year, file="save_RData/lai_miroc5_visit_rcp60_2005soc_co2_year.RData")
+
+
+
+save(lai_gfdl_esm2m_lpj_guess_historical_histsoc_co2_year, file="save_RData/lai_gfdl_esm2m_lpj_guess_historical_histsoc_co2_year.RData")
+save(lai_ipsl_cm5a_lr_lpj_guess_historical_histsoc_co2_year, file="save_RData/lai_ipsl_cm5a_lr_lpj_guess_historical_histsoc_co2_year.RData")
+save(lai_hadgem2_es_lpj_guess_historical_histsoc_co2_year, file="save_RData/lai_hadgem2_es_lpj_guess_historical_histsoc_co2_year.RData")
+save(lai_miroc5_lpj_guess_historical_histsoc_co2_year, file="save_RData/lai_miroc5_lpj_guess_historical_histsoc_co2_year.RData")
+
+save(lai_gfdl_esm2m_orchidee_historical_histsoc_co2_year, file="save_RData/lai_gfdl_esm2m_orchidee_historical_histsoc_co2_year.RData")
+save(lai_ipsl_cm5a_lr_orchidee_historical_histsoc_co2_year, file="save_RData/lai_ipsl_cm5a_lr_orchidee_historical_histsoc_co2_year.RData")
+save(lai_hadgem2_es_orchidee_historical_histsoc_co2_year, file="save_RData/lai_hadgem2_es_orchidee_historical_histsoc_co2_year.RData")
+save(lai_miroc5_orchidee_historical_histsoc_co2_year, file="save_RData/lai_miroc5_orchidee_historical_histsoc_co2_year.RData")
+
+save(lai_gfdl_esm2m_caraib_historical_histsoc_co2_year, file="save_RData/lai_gfdl_esm2m_caraib_historical_histsoc_co2_year.RData")
+save(lai_ipsl_cm5a_lr_caraib_historical_histsoc_co2_year, file="save_RData/lai_ipsl_cm5a_lr_caraib_historical_histsoc_co2_year.RData")
+save(lai_hadgem2_es_caraib_historical_histsoc_co2_year, file="save_RData/lai_hadgem2_es_caraib_historical_histsoc_co2_year.RData")
+save(lai_miroc5_caraib_historical_histsoc_co2_year, file="save_RData/lai_miroc5_caraib_historical_histsoc_co2_year.RData")
+
+save(lai_gfdl_esm2m_visit_historical_histsoc_co2_year, file="save_RData/lai_gfdl_esm2m_visit_historical_histsoc_co2_year.RData")
+save(lai_ipsl_cm5a_lr_visit_historical_histsoc_co2_year, file="save_RData/lai_ipsl_cm5a_lr_visit_historical_histsoc_co2_year.RData")
+save(lai_hadgem2_es_visit_historical_histsoc_co2_year, file="save_RData/lai_hadgem2_es_visit_historical_histsoc_co2_year.RData")
+save(lai_miroc5_visit_historical_histsoc_co2_year, file="save_RData/lai_miroc5_visit_historical_histsoc_co2_year.RData")
+
+
+##########################################################################
+### Drylands: fraction of the globe between -50:50 with lai below 2:
+
+### we need to get the grid cell area:
+data <- nc_open("/n/holystore01/LABS/mccoll_lab/Lab/aberg/DATA/ISIMIP/RCP60/gridarea.nc")
+cell_area<- ncvar_get(data, "cell_area")[,360:1]
+nc_close(data)
+
+## We need a rought mask:
+mask <- lai_MMM_lpj_guess_historical_histsoc_co2_year[,,1]
+mask[which(is.na(mask)==F)] <- 1
+mask_greenland <- array(1, dim=c(length(lon), length(lat)))
+for (i in 1:length(lon)){
+for (j in 1:length(lat)){
+if ( ( lat[j] > 60) && (lon[i] > -60) && ( lon[i] < -25 )) {mask_greenland[i,j] <- NA }
+if ( ( lat[j] > 66) && (lon[i] > -60) && ( lon[i] < -5 )) {mask_greenland[i,j] <- NA }
+if ( ( lat[j] > 70) && (lon[i] > -70) && ( lon[i] < -5 )) {mask_greenland[i,j] <- NA }
+}}
+print("Removing Greenland !!!")
+mask <- mask * mask_greenland
+
+# Also removing very high latitudes, and low latitudes
+min(which(lat>75))
+mask[,332:360] <- NA
+for (i in 1:length(lon)){
+for (j in 1:length(lat)){
+if ( ( lat[j] > 70) && (lon[i] > -150) && ( lon[i] < -50 )) {mask[i,j] <- NA }  }}
+
+
+
+cell_area <- cell_area * mask / 1000000
+png("cell_area.png"); image.plot(cell_area); dev.off()
+
+lowlat_drylands <- min(which(lat_lpj_guess > -60))
+highlat_drylands <- min(which(lat_lpj_guess > 60))
+m <- sum(cell_area[,], na.rm=T)
+
+for (m in 1:4){
+lon <- get(paste("lon_",list_models[m], sep=""));lat <- get(paste("lat_",list_models[m], sep=""))
+lowlat <- min(which(lat > -60)); highlat <- min(which(lat > 80))
+#lai_fut_co2 <- apply(get(paste("lai_MMM_", list_models[m], "_rcp60_2005soc_co2_year",sep=""))[,,65:94], c(1,2), mean, na.rm=T)
+#lai_pres<- apply(get(paste("lai_MMM_", list_models[m],"_historical_histsoc_co2_year",sep=""))[,,111:140], c(1,2), mean, na.rm=T)
+#drylands_threshold <- quantile(lai_pres, probs=seq(0,1, by=0.01), na.rm=T)[46]
+drylands_threshold <- 1.5
+assign(paste("drylands_threshold_",list_models[m],sep=""), drylands_threshold) }
+
+frac_drylands_lai_MMM_lpj_guess_hist<- NULL
+frac_drylands_lai_MMM_lpj_guess_rcp60_co2 <- NULL
+frac_drylands_lai_MMM_lpj_guess_rcp60_2005co2 <- NULL
+for (t in 1: 145) { frac_drylands_lai_MMM_lpj_guess_hist[t] <-  
+sum(cell_area[,lowlat_drylands:highlat_drylands] [which( lai_MMM_lpj_guess_historical_histsoc_co2_year[,lowlat_drylands:highlat_drylands,t] < drylands_threshold_lpj_guess)],na.rm=T) / m }
+for (t in 1: 94) { frac_drylands_lai_MMM_lpj_guess_rcp60_co2[t] <-
+sum(cell_area[,lowlat_drylands:highlat_drylands] [which( lai_MMM_lpj_guess_rcp60_2005soc_co2_year[,lowlat_drylands:highlat_drylands,t] < drylands_threshold_lpj_guess)],na.rm=T) / m }
+for (t in 1: 94) { frac_drylands_lai_MMM_lpj_guess_rcp60_2005co2[t] <-
+sum(cell_area[,lowlat_drylands:highlat_drylands] [which( lai_MMM_lpj_guess_rcp60_2005soc_2005co2_year[,lowlat_drylands:highlat_drylands,t] < drylands_threshold_lpj_guess)],na.rm=T) / m }
+
+frac_drylands_lai_MMM_orchidee_hist<- NULL
+frac_drylands_lai_MMM_orchidee_rcp60_co2 <- NULL
+frac_drylands_lai_MMM_orchidee_rcp60_2005co2 <- NULL
+for (t in 1: 145) { frac_drylands_lai_MMM_orchidee_hist[t] <-  
+sum(cell_area[,lowlat_drylands:highlat_drylands] [which( lai_MMM_orchidee_historical_histsoc_co2_year[,lowlat_drylands:highlat_drylands,t] < drylands_threshold_orchidee)],na.rm=T) / m }
+for (t in 1: 94) { frac_drylands_lai_MMM_orchidee_rcp60_co2[t] <-
+sum(cell_area[,lowlat_drylands:highlat_drylands] [which( lai_MMM_orchidee_rcp60_2005soc_co2_year[,lowlat_drylands:highlat_drylands,t] < drylands_threshold_orchidee)],na.rm=T) / m }
+for (t in 1: 94) { frac_drylands_lai_MMM_orchidee_rcp60_2005co2[t] <-
+sum(cell_area[,lowlat_drylands:highlat_drylands] [which( lai_MMM_orchidee_rcp60_2005soc_2005co2_year[,lowlat_drylands:highlat_drylands,t] < drylands_threshold_orchidee)],na.rm=T) / m }
+
+frac_drylands_lai_MMM_visit_hist<- NULL
+frac_drylands_lai_MMM_visit_rcp60_co2 <- NULL
+frac_drylands_lai_MMM_visit_rcp60_2005co2 <- NULL
+for (t in 1: 145) { frac_drylands_lai_MMM_visit_hist[t] <-
+sum(cell_area[,lowlat_drylands:highlat_drylands] [which( lai_MMM_visit_historical_histsoc_co2_year[,lowlat_drylands:highlat_drylands,t] < drylands_threshold_visit)],na.rm=T) / m }
+for (t in 1: 94) { frac_drylands_lai_MMM_visit_rcp60_co2[t] <-
+sum(cell_area[,lowlat_drylands:highlat_drylands] [which( lai_MMM_visit_rcp60_2005soc_co2_year[,lowlat_drylands:highlat_drylands,t] < drylands_threshold_visit)],na.rm=T) / m }
+for (t in 1: 94) { frac_drylands_lai_MMM_visit_rcp60_2005co2[t] <-
+sum(cell_area[,lowlat_drylands:highlat_drylands] [which( lai_MMM_visit_rcp60_2005soc_2005co2_year[,lowlat_drylands:highlat_drylands,t] < drylands_threshold_visit)],na.rm=T) / m }
+
+frac_drylands_lai_MMM_caraib_hist<- NULL
+frac_drylands_lai_MMM_caraib_rcp60_co2 <- NULL
+frac_drylands_lai_MMM_caraib_rcp60_2005co2 <- NULL
+for (t in 1: 145) { frac_drylands_lai_MMM_caraib_hist[t] <-
+sum(cell_area[,lowlat_drylands:highlat_drylands] [which( lai_MMM_caraib_historical_histsoc_co2_year[,lowlat_drylands:highlat_drylands,t] < drylands_threshold_caraib)],na.rm=T) / m }
+for (t in 1: 94) { frac_drylands_lai_MMM_caraib_rcp60_co2[t] <-
+sum(cell_area[,lowlat_drylands:highlat_drylands] [which( lai_MMM_caraib_rcp60_2005soc_co2_year[,lowlat_drylands:highlat_drylands,t] < drylands_threshold_caraib)],na.rm=T) / m }
+for (t in 1: 94) { frac_drylands_lai_MMM_caraib_rcp60_2005co2[t] <-
+sum(cell_area[,lowlat_drylands:highlat_drylands] [which( lai_MMM_caraib_rcp60_2005soc_2005co2_year[,lowlat_drylands:highlat_drylands,t] < drylands_threshold_caraib)],na.rm=T) / m }
+
+
+
+
+png("frac_drylands_timeseries.png", width=1200, height=800); layout(matrix(1:4, 2,2))
+plot(1861:2005, frac_drylands_lai_MMM_lpj_guess_hist, xlim=c(1861,2099), ylim=c(0.2,0.6), type="l", xlab="1861-2099",
+main="LPJ_GUESS")
+lines(2006:2099, frac_drylands_lai_MMM_lpj_guess_rcp60_co2)
+lines(2006:2099, frac_drylands_lai_MMM_lpj_guess_rcp60_2005co2, col="red")
+#legend("topright", bty="n", col=c("black", "red"), c("HIST soc/CO2, then 2005 soc./ RCP60 CO2", "HIST soc/CO2, then 2005 soc and CO2"), lwd=2)
+abline(v=2005, col="gray")
+text(1950, 0.6, "HIST soc/CO2")
+text(2050, 0.6, "RCP60, soc.=2005 and CO2=2005", col="red")
+text(2050, 0.58, "RCP60, soc.=2005 and CO2=RCP60")
+plot(1861:2005, frac_drylands_lai_MMM_orchidee_hist, xlim=c(1861,2099), ylim=c(0.2,0.6), type="l", xlab="1861-2099", 
+main="ORCHIDEE")
+lines(2006:2099, frac_drylands_lai_MMM_orchidee_rcp60_co2)
+lines(2006:2099, frac_drylands_lai_MMM_orchidee_rcp60_2005co2, col="red")
+abline(v=2005, col="gray")
+text(1950, 0.6, "HIST soc/CO2")
+text(2050, 0.6, "RCP60, soc.=2005 and CO2=2005", col="red")
+text(2050, 0.58, "RCP60, soc.=2005 and CO2=RCP60")
+plot(1861:2005, frac_drylands_lai_MMM_visit_hist, xlim=c(1861,2099), ylim=c(0.2,0.6), type="l", xlab="1861-2099", 
+main="VISIT")
+lines(2006:2099, frac_drylands_lai_MMM_visit_rcp60_co2)
+lines(2006:2099, frac_drylands_lai_MMM_visit_rcp60_2005co2, col="red")
+abline(v=2005, col="gray")
+text(1950, 0.6, "HIST soc/CO2")
+text(2050, 0.6, "RCP60, soc.=2005 and CO2=2005", col="red")
+text(2050, 0.58, "RCP60, soc.=2005 and CO2=RCP60")
+plot(1861:2005, frac_drylands_lai_MMM_caraib_hist, xlim=c(1861,2099), ylim=c(0.2,0.6), type="l", xlab="1861-2099",
+main="CARAIB")
+lines(2006:2099, frac_drylands_lai_MMM_caraib_rcp60_co2)
+lines(2006:2099, frac_drylands_lai_MMM_caraib_rcp60_2005co2, col="red")
+abline(v=2005, col="gray")
+text(1950, 0.6, "HIST soc/CO2")
+text(2050, 0.6, "RCP60, soc.=2005 and CO2=2005", col="red")
+text(2050, 0.58, "RCP60, soc.=2005 and CO2=RCP60")
+dev.off()
+
+
+### All lines on a single plot?
+png("frac_drylands_timeseries_oneplot.png", width=1000, height=700)
+plot(1861:2005, frac_drylands_lai_MMM_lpj_guess_hist, xlim=c(1861,2099), ylim=c(0.2, 0.8), type="l", xlab="1861-2099")
+lines(2006:2099, frac_drylands_lai_MMM_lpj_guess_rcp60_co2)
+lines(2006:2099, frac_drylands_lai_MMM_lpj_guess_rcp60_2005co2, col="red")
+abline(v=2005, col="gray")
+text(1950, 0.6, "HIST soc/CO2")
+text(2050, 0.6, "RCP60, CO2=2005", col="red")
+text(2050, 0.58, "RCP60, CO2=RCP60")
+lines(1861:2005, frac_drylands_lai_MMM_orchidee_hist, col="gray80")
+lines(2006:2099, frac_drylands_lai_MMM_orchidee_rcp60_co2, col="gray80")
+lines(2006:2099, frac_drylands_lai_MMM_orchidee_rcp60_2005co2, col="red")
+lines(1861:2005, frac_drylands_lai_MMM_visit_hist, col="gray70")
+lines(2006:2099, frac_drylands_lai_MMM_visit_rcp60_co2)
+lines(2006:2099, frac_drylands_lai_MMM_visit_rcp60_2005co2, col="red")
+lines(1861:2005, frac_drylands_lai_MMM_caraib_hist, col="gray60")
+lines(2006:2099, frac_drylands_lai_MMM_caraib_rcp60_co2)
+lines(2006:2099, frac_drylands_lai_MMM_caraib_rcp60_2005co2, col="red")
+dev.off()
+
+
+
+############################################
+#### Just mean LAI (we have to weigh it, though...)
+
+global_lai_MMM_lpj_guess_hist<- NULL
+global_lai_MMM_lpj_guess_rcp60_co2 <- NULL
+global_lai_MMM_lpj_guess_rcp60_2005co2 <- NULL
+for (t in 1:145) {
+global_lai_MMM_lpj_guess_hist[t] <- weighted.mean(lai_MMM_lpj_guess_historical_histsoc_co2_year[,,t], cell_area, na.rm=T)  }
+for (t in 1:94) {
+global_lai_MMM_lpj_guess_rcp60_co2[t] <- weighted.mean(lai_MMM_lpj_guess_rcp60_2005soc_co2_year[,,t], cell_area, na.rm=T) 
+global_lai_MMM_lpj_guess_rcp60_2005co2[t] <- weighted.mean(lai_MMM_lpj_guess_rcp60_2005soc_2005co2_year[,,t], cell_area, na.rm=T) }
+
+global_lai_MMM_orchidee_hist<- NULL
+global_lai_MMM_orchidee_rcp60_co2 <- NULL
+global_lai_MMM_orchidee_rcp60_2005co2 <- NULL
+for (t in 1:145) {
+global_lai_MMM_orchidee_hist[t] <- sum(lai_MMM_orchidee_historical_histsoc_co2_year[,,t]*cell_area, na.rm=T)/sum(cell_area, na.rm=T)  }
+for (t in 1:94) {
+global_lai_MMM_orchidee_rcp60_co2[t] <- sum(lai_MMM_orchidee_rcp60_2005soc_co2_year[,,t]*cell_area, na.rm=T)/sum(cell_area, na.rm=T) 
+global_lai_MMM_orchidee_rcp60_2005co2[t] <- sum(lai_MMM_orchidee_rcp60_2005soc_2005co2_year[,,t]*cell_area, na.rm=T)/sum(cell_area, na.rm=T) }
+global_lai_MMM_visit_hist<- NULL
+global_lai_MMM_visit_rcp60_co2 <- NULL
+global_lai_MMM_visit_rcp60_2005co2 <- NULL
+for (t in 1:145) {
+global_lai_MMM_visit_hist[t] <- sum(lai_MMM_visit_historical_histsoc_co2_year[,,t]*cell_area, na.rm=T)/sum(cell_area, na.rm=T)  }
+for (t in 1:94) {
+global_lai_MMM_visit_rcp60_co2[t] <- sum(lai_MMM_visit_rcp60_2005soc_co2_year[,,t]*cell_area, na.rm=T)/sum(cell_area, na.rm=T) 
+global_lai_MMM_visit_rcp60_2005co2[t] <- sum(lai_MMM_visit_rcp60_2005soc_2005co2_year[,,t]*cell_area, na.rm=T)/sum(cell_area, na.rm=T) }
+global_lai_MMM_caraib_hist<- NULL
+global_lai_MMM_caraib_rcp60_co2 <- NULL
+global_lai_MMM_caraib_rcp60_2005co2 <- NULL
+for (t in 1:145) {
+global_lai_MMM_caraib_hist[t] <- sum(lai_MMM_caraib_historical_histsoc_co2_year[,,t]*cell_area, na.rm=T)/sum(cell_area, na.rm=T)  }
+for (t in 1:94) {
+global_lai_MMM_caraib_rcp60_co2[t] <- sum(lai_MMM_caraib_rcp60_2005soc_co2_year[,,t]*cell_area, na.rm=T)/sum(cell_area, na.rm=T) 
+global_lai_MMM_caraib_rcp60_2005co2[t] <- sum(lai_MMM_caraib_rcp60_2005soc_2005co2_year[,,t]*cell_area, na.rm=T)/sum(cell_area, na.rm=T) }
+
+
+
+png("global_LAI_timeseries.png", width=1200, height=800); layout(matrix(1:4, 2,2))
+plot(1861:2005, global_lai_MMM_lpj_guess_hist, xlim=c(1861,2099), ylim=c(1, 3), type="l", xlab="1861-2099",
+main="LPJ_GUESS")
+lines(2006:2099, global_lai_MMM_lpj_guess_rcp60_co2)
+lines(2006:2099, global_lai_MMM_lpj_guess_rcp60_2005co2, col="red")
+#legend("topright", bty="n", col=c("black", "red"), c("HIST soc/CO2, then 2005 soc./ RCP60 CO2", "HIST soc/CO2, then 2005 soc and CO2"), lwd=2)
+abline(v=2005, col="gray")
+text(1950, 0.25, "HIST soc/CO2")
+text(2050, 0.25, "RCP60, soc.=2005 and CO2=2005", col="red")
+text(2050, 0.24, "RCP60, soc.=2005 and CO2=RCP60")
+plot(1861:2005, global_lai_MMM_orchidee_hist, xlim=c(1861,2099), ylim=c(1, 3), type="l", xlab="1861-2099",
+main="ORCHIDEE")
+lines(2006:2099, global_lai_MMM_orchidee_rcp60_co2)
+lines(2006:2099, global_lai_MMM_orchidee_rcp60_2005co2, col="red")
+abline(v=2005, col="gray")
+text(1950, 0.25, "HIST soc/CO2")
+text(2050, 0.25, "RCP60, soc.=2005 and CO2=2005", col="red")
+text(2050, 0.24, "RCP60, soc.=2005 and CO2=RCP60")
+plot(1861:2005, global_lai_MMM_visit_hist, xlim=c(1861,2099), ylim=c(3,6), type="l", xlab="1861-2099",
+main="VISIT")
+lines(2006:2099, global_lai_MMM_visit_rcp60_co2)
+lines(2006:2099, global_lai_MMM_visit_rcp60_2005co2, col="red")
+abline(v=2005, col="gray")
+text(1950, 0.25, "HIST soc/CO2")
+text(2050, 0.25, "RCP60, soc.=2005 and CO2=2005", col="red")
+text(2050, 0.24, "RCP60, soc.=2005 and CO2=RCP60")
+plot(1861:2005, global_lai_MMM_caraib_hist, xlim=c(1861,2099), ylim=c(1, 3), type="l", xlab="1861-2099",
+main="CARAIB")
+lines(2006:2099, global_lai_MMM_caraib_rcp60_co2)
+lines(2006:2099, global_lai_MMM_caraib_rcp60_2005co2, col="red")
+abline(v=2005, col="gray")
+text(1950, 0.25, "HIST soc/CO2")
+text(2050, 0.25, "RCP60, soc.=2005 and CO2=2005", col="red")
+text(2050, 0.24, "RCP60, soc.=2005 and CO2=RCP60")
+dev.off()
+
+
+
+
+
