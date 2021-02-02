@@ -2,7 +2,7 @@
 
 This is the R code for the analysis in Berg and McColl (2021), "No projected global drylands expansion under greenhouse warming".
 
-This code is archived here publicly for reproducibility purposes. Please feel free to use, but not modify. Please contact Alexis Berg (alexis_berg@fas.harvard.edu; alberg82@gmail.com) for any issues/questions.
+This code is archived here publicly for reproducibility purposes. Please feel free to copy and re-use, but not modify these files here. Please contact Alexis Berg (alexis_berg@fas.harvard.edu; alberg82@gmail.com) for any issues/questions.
 
 This study is based on CMIP5 and ISIMIP modeling results, which the scripts in this repository allow to read and plot. 
 
@@ -12,9 +12,9 @@ The directory RAD_PHYS contains files to read and plot data from the CMIP5 "1%" 
 
 THe directory ISIMIP contains files to read and plot data from the ISIMIP offline experiments with Dynamic Global Vegetation Models forced by climate model outputs, with and without CO2 change after 2005. 
 
-For clarity these three ensembles of scripts should be runs in different workspace. 
+For clarity these three ensembles of scripts should be runs in different workspaces. 
 
-The scripts reading the model ouputs sometimes point to data stored at the LDEO climate library, which thus should be accessible online, and sometimes on data stored locally - in the latter case, you'll have to download the data yourself first (e.g., from ESGF) and modify the paths accordingly. 
+The scripts reading the model ouputs sometimes point to data stored at the LDEO climate library, which thus should be accessible online, and sometimes to data stored locally - in the latter case, you'll have to download the data yourself first (e.g., from ESGF) and modify the paths accordingly. 
 
 
 
